@@ -9,3 +9,15 @@ struct Transaction {
     let transactionDate: Date
     let comment: String?
 }
+
+// MARK: - Hashable
+
+extension Transaction: Hashable {
+    static func == (lhs: Transaction, rhs: Transaction) -> Bool {
+        lhs.id == rhs.id
+    }
+    
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(id)
+    }
+}
