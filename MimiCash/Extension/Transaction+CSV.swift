@@ -71,7 +71,7 @@ extension Transaction {
             let emoji = fields[7].first,
             let isIncome = Bool(fields[8].lowercased()),
             let amount = Decimal(string: fields[9]),
-            let transactionDate = isoDateFormatter.date(from: fields[10])
+            let transactionDate = ISO8601DateFormatter.isoDateFormatter.date(from: fields[10])
         else {
             assertionFailure("Invalid CSV line: one or more fields are invalid")
             return nil
@@ -100,10 +100,4 @@ extension Transaction {
             comment: fields[11]
         )
     }
-    
-    private static let isoDateFormatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter
-    }()
 }

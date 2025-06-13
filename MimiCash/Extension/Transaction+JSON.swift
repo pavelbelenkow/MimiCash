@@ -21,7 +21,7 @@ extension Transaction {
                 "isIncome": category.isIncome == .income
             ],
             "amount": amount.description,
-            "transactionDate": Self.isoDateFormatter.string(from: transactionDate),
+            "transactionDate": ISO8601DateFormatter.isoDateFormatter.string(from: transactionDate),
         ]
         
         if let comment {
@@ -96,10 +96,4 @@ extension Transaction {
             comment: comment
         )
     }
-    
-    private static let isoDateFormatter: ISO8601DateFormatter = {
-        let formatter = ISO8601DateFormatter()
-        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        return formatter
-    }()
 }
