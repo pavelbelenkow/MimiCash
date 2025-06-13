@@ -1,8 +1,8 @@
 import Foundation
 
-// MARK: - TransactionsFileCacheProtocol
+// MARK: - TransactionsFileCache Protocol
 
-protocol TransactionsFileCacheProtocol {
+protocol TransactionsFileCache {
     /// Коллекция всех уникальных транзакций
     var transactions: [Transaction] { get async }
     
@@ -19,7 +19,7 @@ protocol TransactionsFileCacheProtocol {
     func load(from filename: String) async throws
 }
 
-actor TransactionsFileCache: TransactionsFileCacheProtocol {
+actor TransactionsFileCacheImp: TransactionsFileCache {
     
     // MARK: - Private Properties
     private let fileManager = FileManager.default

@@ -1,8 +1,8 @@
 import Foundation
 
-// MARK: - BankAccountsServiceProtocol
+// MARK: - BankAccountsService Protocol
 
-protocol BankAccountsServiceProtocol {
+protocol BankAccountsService {
     /// Возвращает первый банковский счет из списка
     func fetchCurrentAccount() async throws -> BankAccount
     
@@ -10,7 +10,7 @@ protocol BankAccountsServiceProtocol {
     func update(account: BankAccount) async throws -> BankAccount
 }
 
-final class BankAccountsService: BankAccountsServiceProtocol {
+final class BankAccountsServiceImp: BankAccountsService {
     
     private var accounts = [
         BankAccount(id: 1, name: "Основной счет", balance: 1000.00, currency: "RUB"),

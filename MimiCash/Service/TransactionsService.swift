@@ -1,8 +1,8 @@
 import Foundation
 
-// MARK: - TransactionsServiceProtocol
+// MARK: - TransactionsService Protocol
 
-protocol TransactionsServiceProtocol {
+protocol TransactionsService {
     /// Возвращает список транзакций по `id` счета за период от `startDate` до `endDate`
     func fetchTransactions(
         accountId: Int,
@@ -20,7 +20,7 @@ protocol TransactionsServiceProtocol {
     func delete(transactionId: Int) async throws
 }
 
-final class TransactionsService: TransactionsServiceProtocol {
+final class TransactionsServiceImp: TransactionsService {
     
     private var transactions = [
         Transaction(

@@ -1,8 +1,8 @@
 import Foundation
 
-// MARK: - CategoriesServiceProtocol
+// MARK: - CategoriesService Protocol
 
-protocol CategoriesServiceProtocol {
+protocol CategoriesService {
     /// Возвращает список всех категорий
     func fetchAllCategories() async throws -> [Category]
     
@@ -10,7 +10,7 @@ protocol CategoriesServiceProtocol {
     func fetchCategories(for direction: Direction) async throws -> [Category]
 }
 
-final class CategoriesService: CategoriesServiceProtocol {
+final class CategoriesServiceImp: CategoriesService {
     
     private let categories = [
         Category(id: 1, name: "Одежда", emoji: "👔", isIncome: .outcome),
