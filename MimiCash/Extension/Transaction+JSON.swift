@@ -4,6 +4,15 @@ import Foundation
 
 extension Transaction {
     
+    /// Перечисление ошибок парсинга JSON
+    enum ParseError: Error, Equatable {
+        case invalidTopLevelStructure
+        case missingOrInvalidField(fieldName: String)
+        case invalidAccountFields
+        case invalidCategoryFields
+        case invalidDateFormat
+    }
+    
     /// Возвращает представление транзакции в виде Foundation JSON object
     var jsonObject: Any {
         var dict: [String: Any] = [
@@ -32,19 +41,36 @@ extension Transaction {
     }
     
     /// Парсит Foundation JSON object в структуру `Transaction`
-    static func parse(jsonObject: Any) -> Transaction? {
+    static func parse(jsonObject: Any) throws -> Transaction? {
+        guard let dict = jsonObject as? [String: Any] else {
+            throw ParseError.invalidTopLevelStructure
+        }
+        
+        guard let id = dict["id"] as? Int else {
+            throw ParseError.missingOrInvalidField(fieldName: "id")
+        }
+        
+        guard let accountDict = dict["account"] as? [String: Any] else {
+            throw ParseError.missingOrInvalidField(fieldName: "account")
+        }
+        
+        guard let categoryDict = dict["category"] as? [String: Any] else {
+            throw ParseError.missingOrInvalidField(fieldName: "category")
+        }
+        
         guard
-            let dict = jsonObject as? [String: Any],
-            let id = dict["id"] as? Int,
-            let accountDict = dict["account"] as? [String: Any],
-            let categoryDict = dict["category"] as? [String: Any],
             let amountString = dict["amount"] as? String,
-            let amount = Decimal(string: amountString),
-            let dateString = dict["transactionDate"] as? String,
-            let transactionDate = isoDateFormatter.date(from: dateString)
+            let amount = Decimal(string: amountString)
         else {
-            assertionFailure("Transaction: invalid top-level structure or basic fields")
-            return nil
+            throw ParseError.missingOrInvalidField(fieldName: "amount")
+        }
+        
+        guard let dateString = dict["transactionDate"] as? String else {
+            throw ParseError.missingOrInvalidField(fieldName: "transactionDate")
+        }
+        
+        guard let transactionDate = ISO8601DateFormatter.isoDateFormatter.date(from: dateString) else {
+            throw ParseError.invalidDateFormat
         }
         
         let comment = dict["comment"] as? String
@@ -57,8 +83,7 @@ extension Transaction {
             let balance = Decimal(string: balanceString),
             let currency = accountDict["currency"] as? String
         else {
-            assertionFailure("Transaction: invalid BankAccount fields")
-            return nil
+            throw ParseError.invalidAccountFields
         }
         
         let account = BankAccount(
@@ -76,8 +101,7 @@ extension Transaction {
             let emoji = emojiString.first,
             let isIncome = categoryDict["isIncome"] as? Bool
         else {
-            assertionFailure("Transaction: invalid Category fields")
-            return nil
+            throw ParseError.invalidCategoryFields
         }
         
         let category = Category(

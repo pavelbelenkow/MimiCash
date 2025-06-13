@@ -15,7 +15,7 @@ extension Transaction {
             }
             
             let fields = parseCSVLine(line)
-            if let transaction = fromCSVFields(fields) {
+            if let transaction = try fromCSVFields(fields) {
                 result.append(transaction)
             }
         }
@@ -61,7 +61,7 @@ extension Transaction {
         return fields.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
     }
     
-    private static func fromCSVFields(_ fields: [String]) -> Transaction? {
+    private static func fromCSVFields(_ fields: [String]) throws -> Transaction? {
         guard
             fields.count >= 12,
             let id = Int(fields[0]),
@@ -73,8 +73,7 @@ extension Transaction {
             let amount = Decimal(string: fields[9]),
             let transactionDate = ISO8601DateFormatter.isoDateFormatter.date(from: fields[10])
         else {
-            assertionFailure("Invalid CSV line: one or more fields are invalid")
-            return nil
+            throw NSError(domain: "Invalid CSV line: one or more fields are invalid", code: 1)
         }
         
         let account = BankAccount(

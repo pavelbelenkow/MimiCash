@@ -64,7 +64,7 @@ actor TransactionsFileCache: TransactionsFileCacheProtocol {
         
         let data = try Data(contentsOf: url)
         let raw = try JSONSerialization.jsonObject(with: data) as? [Any] ?? []
-        let parsed = raw.compactMap { Transaction.parse(jsonObject: $0) }
+        let parsed = try raw.compactMap { try Transaction.parse(jsonObject: $0) }
         transactionSet = Set(parsed)
     }
 }
