@@ -4,88 +4,37 @@ import Foundation
 
 extension Transaction {
     
-    static func parseCSV(from url: URL) async throws -> [Transaction] {
-        var result: [Transaction] = []
-        var isFirstLine = true
-        
-        for try await line in url.lines {
-            if isFirstLine {
-                isFirstLine = false
-                continue
-            }
-            
-            let fields = parseCSVLine(line)
-            if let transaction = try fromCSVFields(fields) {
-                result.append(transaction)
-            }
-        }
-        
-        return result
+    static func fromCSVFile(url: URL) async throws -> [Transaction] {
+        let parser: CSVParser = CSVParserImp()
+        let csv = try await parser.parseFile(from: url)
+        return csv.rows.compactMap { Transaction.parse(from: $0) }
     }
     
-    private static func parseCSVLine(_ line: String) -> [String] {
-        var fields: [String] = []
-        var currentField = ""
-        var insideQuotes = false
-        var iterator = line.makeIterator()
-        
-        while let char = iterator.next() {
-            if char == "\"" {
-                if insideQuotes {
-                    if let nextChar = iterator.next() {
-                        if nextChar == "\"" {
-                            currentField.append("\"")
-                        } else {
-                            insideQuotes = false
-                            if nextChar == "," {
-                                fields.append(currentField)
-                                currentField = ""
-                            } else {
-                                currentField.append(nextChar)
-                            }
-                        }
-                    } else {
-                        insideQuotes = false
-                    }
-                } else {
-                    insideQuotes = true
-                }
-            } else if char == "," && !insideQuotes {
-                fields.append(currentField)
-                currentField = ""
-            } else {
-                currentField.append(char)
-            }
-        }
-        fields.append(currentField)
-        return fields.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
-    }
-    
-    private static func fromCSVFields(_ fields: [String]) throws -> Transaction? {
+    private static func parse(from row: [String: String]) -> Transaction? {
         guard
-            fields.count >= 12,
-            let id = Int(fields[0]),
-            let accountId = Int(fields[1]),
-            let accountBalance = Decimal(string: fields[3]),
-            let categoryId = Int(fields[5]),
-            let emoji = fields[7].first,
-            let isIncome = Bool(fields[8].lowercased()),
-            let amount = Decimal(string: fields[9]),
-            let transactionDate = ISO8601DateFormatter.isoDateFormatter.date(from: fields[10])
-        else {
-            throw NSError(domain: "Invalid CSV line: one or more fields are invalid", code: 1)
-        }
+            let idStr = row["id"], let id = Int(idStr),
+            let accountIdStr = row["account.id"], let accountId = Int(accountIdStr),
+            let accountBalanceStr = row["account.balance"], let balance = Decimal(string: accountBalanceStr),
+            let currency = row["account.currency"],
+            let accountName = row["account.name"],
+            let categoryIdStr = row["category.id"], let categoryId = Int(categoryIdStr),
+            let emojiStr = row["category.emoji"], let emoji = emojiStr.first,
+            let categoryName = row["category.name"],
+            let isIncomeStr = row["category.isIncome"], let isIncome = Bool(isIncomeStr),
+            let amountStr = row["amount"], let amount = Decimal(string: amountStr),
+            let dateStr = row["transactionDate"], let date = ISO8601DateFormatter.isoDateFormatter.date(from: dateStr)
+        else { return nil }
         
         let account = BankAccount(
             id: accountId,
-            name: fields[2],
-            balance: accountBalance,
-            currency: fields[4]
+            name: accountName,
+            balance: balance,
+            currency: currency
         )
         
         let category = Category(
             id: categoryId,
-            name: fields[6],
+            name: categoryName,
             emoji: emoji,
             isIncome: isIncome ? .income : .outcome
         )
@@ -95,8 +44,8 @@ extension Transaction {
             account: account,
             category: category,
             amount: amount,
-            transactionDate: transactionDate,
-            comment: fields[11]
+            transactionDate: date,
+            comment: row["comment"] ?? ""
         )
     }
 }
