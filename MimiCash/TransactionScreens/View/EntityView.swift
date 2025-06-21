@@ -4,7 +4,6 @@ struct EntityView<Content, Output>: View where Content: View {
     let state: ViewState<Output>
     let title: String
     let loadingText: String
-    let emptyText: String
     let errorPrefix: String
     let content: (Output) -> Content
     
