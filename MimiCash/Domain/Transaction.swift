@@ -10,6 +10,17 @@ struct Transaction: Identifiable {
     let comment: String?
 }
 
+extension Transaction {
+    
+    func formattedAmount() -> String {
+        amount.formattedAsCurrency(code: account.currency)
+    }
+    
+    func formattedDate() -> String {
+        transactionDate.formatted(date: .omitted, time: .shortened)
+    }
+}
+
 // MARK: - Hashable
 
 extension Transaction: Hashable {
