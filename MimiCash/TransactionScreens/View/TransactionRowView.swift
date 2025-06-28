@@ -33,10 +33,10 @@ struct TransactionRowView: View {
                 Spacer()
                 
                 VStack(alignment: .trailing) {
-                    Text(transaction.amount.formatted() + " ₽")
+                    Text(transaction.formattedAmount())
                     
                     if isHistoryView {
-                        Text(transaction.transactionDate.formatted(date: .omitted, time: .shortened))
+                        Text(transaction.formattedDate())
                     }
                 }
             }

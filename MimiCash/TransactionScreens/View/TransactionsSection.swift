@@ -13,7 +13,7 @@ struct TransactionsSection<Header: View>: View {
                 HStack {
                     Text(isHistory ? "Сумма" : "Всего")
                     Spacer()
-                    Text(output.total.formatted() + " ₽")
+                    Text(output.totalAmountFormatted())
                 }
             }
             

@@ -14,8 +14,6 @@ struct TransactionsListView: View {
             EntityView(
                 state: viewModel.state,
                 title: viewModel.title,
-                loadingText: "Загружаемся...",
-                errorPrefix: "Ошибка: ",
                 content: { output in
                     ZStack(alignment: .bottomTrailing) {
                         TransactionsSection(

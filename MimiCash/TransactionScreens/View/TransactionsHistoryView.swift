@@ -14,8 +14,6 @@ struct TransactionsHistoryView: View {
         EntityView(
             state: viewModel.state,
             title: "Моя история",
-            loadingText: "Загружаемся...",
-            errorPrefix: "Ошибка: ",
             content: { output in
                 TransactionsSection(
                     output: viewModel.sortedOutput ?? output,
