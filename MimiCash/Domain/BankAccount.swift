@@ -7,3 +7,12 @@ struct BankAccount {
     let balance: Decimal
     let currency: String
 }
+
+// MARK: - Methods
+
+extension BankAccount {
+    
+    func formattedBalance() -> String {
+        balance.formattedAsCurrency(code: currency)
+    }
+}
