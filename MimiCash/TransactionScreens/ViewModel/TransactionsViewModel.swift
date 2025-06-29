@@ -33,8 +33,8 @@ final class TransactionsViewModelImp: TransactionsViewModel {
     }
     
     var title: String {
-        direction == .income ?
-        Tab.incomes.label : Tab.outcomes.label + " cегодня"
+        (direction == .income ?
+        Tab.incomes.label : Tab.outcomes.label) + " cегодня"
     }
     
     // MARK: - Init
