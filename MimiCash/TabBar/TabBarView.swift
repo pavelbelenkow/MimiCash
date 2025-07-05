@@ -43,7 +43,9 @@ private extension Tab {
                 viewModel: BankAccountViewModelImp()
             )
         case .categories:
-            Text(Tab.categories.label)
+            CategoriesView(
+                viewModel: CategoriesViewModelImp()
+            )
         case .settings:
             Text(Tab.settings.label)
         }
