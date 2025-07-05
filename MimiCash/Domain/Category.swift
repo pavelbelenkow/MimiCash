@@ -1,5 +1,5 @@
 /// Модель категории транзакции
-struct Category {
+struct Category: Identifiable {
     let id: Int
     let name: String
     let emoji: Character
