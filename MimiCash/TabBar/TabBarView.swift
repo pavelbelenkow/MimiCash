@@ -32,11 +32,11 @@ private extension Tab {
         switch self {
         case .outcomes:
             TransactionsListView(
-                viewModel: TransactionsViewModelImp(direction: .outcome)
+                viewModel: TransactionsListViewModelImp(direction: .outcome)
             )
         case .incomes:
             TransactionsListView(
-                viewModel: TransactionsViewModelImp(direction: .income)
+                viewModel: TransactionsListViewModelImp(direction: .income)
             )
         case .account:
             BankAccountView(
