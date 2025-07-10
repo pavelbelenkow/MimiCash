@@ -17,4 +17,12 @@ extension Decimal {
         
         return formatter.string(from: self as NSDecimalNumber) ?? "\(self)"
     }
+    
+    func formattedAsPercent() -> String {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .percent
+        formatter.maximumFractionDigits = 2
+        
+        return formatter.string(from: self as NSDecimalNumber) ?? "\(self)"
+    }
 }
