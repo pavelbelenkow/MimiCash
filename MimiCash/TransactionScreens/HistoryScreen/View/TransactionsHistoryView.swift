@@ -24,7 +24,11 @@ struct TransactionsHistoryView: View {
         )
         .toolbar { toolbarContent }
         .navigationDestination(isPresented: $viewModel.isAnalysisPresented) {
-            Text("Анализ")
+            AnalysisView(
+                viewModel: AnalysisViewModelImp(
+                    direction: viewModel.direction
+                )
+            )
         }
         .task {
             await viewModel.loadTransactions(
