@@ -1,11 +1,9 @@
 import SwiftUI
 
 struct TransactionsListView: View {
-    @State private var viewModel: TransactionsViewModel
-    @State private var showHistory = false
-    @State private var isPresented = false
+    @State private var viewModel: TransactionsListViewModel
     
-    init(viewModel: TransactionsViewModel) {
+    init(viewModel: TransactionsListViewModel) {
         self.viewModel = viewModel
     }
     
@@ -23,18 +21,20 @@ struct TransactionsListView: View {
                             }
                         
                         FloatingButton {
-                            isPresented = true
+                            viewModel.presentAddTransaction()
                         }
                     }
                 }
             )
             .toolbar { toolbarContent }
-            .navigationDestination(isPresented: $showHistory) {
+            .navigationDestination(isPresented: $viewModel.isHistoryPresented) {
                 TransactionsHistoryView(
-                    viewModel: TransactionsViewModelImp(direction: viewModel.direction)
+                    viewModel: TransactionsHistoryViewModelImp(
+                        direction: viewModel.direction
+                    )
                 )
             }
-            .fullScreenCover(isPresented: $isPresented) {
+            .fullScreenCover(isPresented: $viewModel.isAddTransactionPresented) {
                 Text("Добавить транзакцию")
             }
         }
@@ -56,7 +56,7 @@ private extension TransactionsListView {
     var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
             Button {
-                showHistory = true
+                viewModel.presentTransactionHistory()
             } label: {
                 Image(systemName: "clock")
             }
@@ -66,7 +66,7 @@ private extension TransactionsListView {
 
 #Preview {
     TransactionsListView(
-        viewModel: TransactionsViewModelImp(direction: .outcome)
+        viewModel: TransactionsListViewModelImp(direction: .outcome)
     )
 }
 
