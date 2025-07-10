@@ -26,6 +26,7 @@ struct TransactionsSection<Header: View>: View {
                     }
                 } else {
                     Text("Нет операций в заданном диапазоне")
+                        .foregroundStyle(.gray)
                         .multilineTextAlignment(.center)
                         .padding()
                         .frame(maxWidth: .infinity)

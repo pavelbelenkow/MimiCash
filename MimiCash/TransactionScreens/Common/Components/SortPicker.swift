@@ -19,6 +19,5 @@ struct SortPicker: View {
             .pickerStyle(.segmented)
             .frame(maxWidth: 180)
         }
-        .padding(.vertical, 4)
     }
 }
