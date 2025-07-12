@@ -14,17 +14,29 @@ struct TransactionsHistoryView: View {
             content: { output in
                 TransactionsSection(
                     output: viewModel.sortedOutput ?? output,
-                    isHistory: true
+                    isHistory: true,
+                    onTransactionChanged: {
+                        Task {
+                            await viewModel.loadTransactions(
+                                from: viewModel.startDate,
+                                to: viewModel.endDate
+                            )
+                        }
+                    }
                 ) {
-                    TransactionDatePicker(label: "Начало", date: $viewModel.startDate)
-                    TransactionDatePicker(label: "Конец", date: $viewModel.endDate)
+                    TransactionDatePicker(date: $viewModel.startDate, label: "Начало")
+                    TransactionDatePicker(date: $viewModel.endDate, label: "Конец")
                     SortPicker(sort: $viewModel.sort)
                 }
             }
         )
         .toolbar { toolbarContent }
         .navigationDestination(isPresented: $viewModel.isAnalysisPresented) {
-            Text("Анализ")
+            AnalysisView(
+                viewModel: AnalysisViewModelImp(
+                    direction: viewModel.direction
+                )
+            )
         }
         .task {
             await viewModel.loadTransactions(
