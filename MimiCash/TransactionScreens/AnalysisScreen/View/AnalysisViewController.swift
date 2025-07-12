@@ -1,5 +1,4 @@
 import UIKit
-import SwiftUI
 
 final class AnalysisViewController: UIViewController {
     
@@ -165,5 +164,21 @@ extension AnalysisViewController: AnalysisTableViewDelegate {
     func handleSortSelection(_ sort: TransactionsSort) {
         viewModel.handleSortSelection(sort)
         updateUI()
+    }
+    
+    func handleTransactionTap(_ transaction: Transaction) {
+        let transactionFormViewController = TransactionFormModalView.createHostingController(
+            transaction: transaction,
+            onDismiss: { [weak self] in
+                DispatchQueue.main.async { [weak self] in
+                    self?.dismiss(animated: true)
+                }
+            },
+            onTransactionChanged: { [weak self] in
+                self?.loadData()
+            }
+        )
+        
+        present(transactionFormViewController, animated: true)
     }
 }

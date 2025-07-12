@@ -3,11 +3,23 @@ import SwiftUI
 struct TransactionRowView: View {
     let transaction: Transaction
     let isHistoryView: Bool
+    let onTransactionChanged: (() -> Void)?
+    @State private var isEditPresented = false
+    
+    init(transaction: Transaction, isHistoryView: Bool, onTransactionChanged: (() -> Void)? = nil) {
+        self.transaction = transaction
+        self.isHistoryView = isHistoryView
+        self.onTransactionChanged = onTransactionChanged
+    }
     
     var body: some View {
-        NavigationLink {
-            EmptyView()
-        } label: {
+        ZStack {
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    isEditPresented = true
+                }
+            
             HStack(spacing: 12) {
                 if transaction.category.isIncome == .outcome {
                     ZStack {
@@ -39,8 +51,20 @@ struct TransactionRowView: View {
                         Text(transaction.formattedDate())
                     }
                 }
+                
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(.secondary)
             }
-            .padding(.trailing)
+        }
+        .fullScreenCover(isPresented: $isEditPresented) {
+            TransactionFormView(
+                viewModel: TransactionFormViewModelImp(mode: .edit(transaction: transaction)),
+                onDismiss: {
+                    isEditPresented = false
+                },
+                onTransactionChanged: onTransactionChanged
+            )
         }
     }
 }

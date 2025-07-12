@@ -97,6 +97,13 @@ extension AnalysisTableView: UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
+        
+        if indexPath.section == 1 {
+            let cellType = analysisDataSource?.cellType(for: indexPath)
+            if case let .transaction(transaction) = cellType {
+                analysisDelegate?.handleTransactionTap(transaction)
+            }
+        }
     }
     
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {

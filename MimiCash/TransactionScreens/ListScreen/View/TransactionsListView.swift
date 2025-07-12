@@ -16,9 +16,18 @@ struct TransactionsListView: View {
                     ZStack(alignment: .bottomTrailing) {
                         TransactionsSection(
                             output: output,
-                            isHistory: false) {
-                                EmptyView()
+                            isHistory: false,
+                            onTransactionChanged: {
+                                Task {
+                                    await viewModel.loadTransactions(
+                                        from: .startOfToday,
+                                        to: .endOfToday
+                                    )
+                                }
                             }
+                        ) {
+                            EmptyView()
+                        }
                         
                         FloatingButton {
                             viewModel.presentAddTransaction()
@@ -35,7 +44,22 @@ struct TransactionsListView: View {
                 )
             }
             .fullScreenCover(isPresented: $viewModel.isAddTransactionPresented) {
-                Text("Добавить транзакцию")
+                TransactionFormView(
+                    viewModel: TransactionFormViewModelImp(
+                        mode: .create(direction: viewModel.direction)
+                    ),
+                    onDismiss: {
+                        viewModel.isAddTransactionPresented = false
+                    },
+                    onTransactionChanged: {
+                        Task {
+                            await viewModel.loadTransactions(
+                                from: .startOfToday,
+                                to: .endOfToday
+                            )
+                        }
+                    }
+                )
             }
         }
         .tint(.navBar)
