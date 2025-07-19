@@ -3,7 +3,7 @@ import Foundation
 // MARK: - TransactionsProvider Protocol
 
 protocol TransactionsProvider {
-    var service: TransactionsService { get }
+    var transactionsService: TransactionsService { get }
     
     func fetchTransactions(
         accountId: Int,
@@ -11,6 +11,10 @@ protocol TransactionsProvider {
         to endDate: Date,
         direction: Direction
     ) async throws -> TransactionsOutput
+    
+    func post(transaction: Transaction) async throws -> Transaction
+    func update(transaction: Transaction) async throws -> Transaction
+    func delete(transactionId: Int) async throws
 }
 
 // MARK: - Default Implementation
@@ -23,7 +27,7 @@ extension TransactionsProvider {
         to endDate: Date,
         direction: Direction
     ) async throws -> TransactionsOutput {
-        let transactions = try await service.fetchTransactions(
+        let transactions = try await transactionsService.fetchTransactions(
             accountId: accountId,
             from: startDate,
             to: endDate
@@ -46,4 +50,17 @@ extension TransactionsProvider {
             total: total
         )
     }
-} 
+    
+    func post(transaction: Transaction) async throws -> Transaction {
+        try await transactionsService.post(transaction: transaction)
+    }
+    
+    func update(transaction: Transaction) async throws -> Transaction {
+        try await transactionsService.update(transaction: transaction)
+    }
+    
+    func delete(transactionId: Int) async throws {
+        try await transactionsService.delete(transactionId: transactionId)
+    }
+}
+

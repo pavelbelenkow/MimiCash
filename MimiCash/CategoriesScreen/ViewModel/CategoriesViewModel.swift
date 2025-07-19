@@ -10,13 +10,15 @@ protocol CategoriesViewModel {
 }
 
 @Observable
-final class CategoriesViewModelImp: CategoriesViewModel {
+final class CategoriesViewModelImp: CategoriesViewModel, CategoriesProvider {
     
     // MARK: - Private Properties
-    private let categoriesService: CategoriesService
     private let searchEngine: SearchEngine
     private var searchTask: Task<Void, Never>?
     private var allCategories: [Category] = []
+    
+    // MARK: - CategoriesProvider Properties
+    let categoriesService: CategoriesService
     
     // MARK: - Properties
     var viewState: ViewState<[SearchResult<Category>]>
@@ -31,7 +33,7 @@ final class CategoriesViewModelImp: CategoriesViewModel {
     
     // MARK: - Init
     init(
-        categoriesService: CategoriesService = CategoriesServiceImp(),
+        categoriesService: CategoriesService = ServiceFactory.shared.createCategoriesService(),
         searchEngine: SearchEngine = FuzzySearchEngine(),
         viewState: ViewState<[SearchResult<Category>]> = .idle
     ) {
@@ -51,7 +53,7 @@ final class CategoriesViewModelImp: CategoriesViewModel {
         viewState = .loading
         
         do {
-            allCategories = try await categoriesService.fetchAllCategories()
+            allCategories = try await fetchAllCategories()
             await performSearch()
         } catch {
             viewState = .error(error.localizedDescription)

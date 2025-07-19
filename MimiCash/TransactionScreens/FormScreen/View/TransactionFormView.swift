@@ -15,9 +15,9 @@ struct TransactionFormView: View {
         onDismiss: @escaping () -> Void,
         onTransactionChanged: (() -> Void)? = nil
     ) {
+        self.viewModel = viewModel
         self.onDismiss = onDismiss
         self.onTransactionChanged = onTransactionChanged
-        self.viewModel = viewModel
     }
     
     var body: some View {

@@ -20,10 +20,7 @@ protocol TransactionFormViewModel {
 
 // MARK: - TransactionFormProvider Protocol
 
-protocol TransactionFormProvider {
-    var transactionsService: TransactionsService { get }
-    var categoriesService: CategoriesService { get }
-}
+protocol TransactionFormProvider: TransactionsProvider, BankAccountsProvider, CategoriesProvider {}
 
 // MARK: - TransactionFormViewModel Implementation
 
@@ -33,6 +30,7 @@ final class TransactionFormViewModelImp: TransactionFormViewModel, TransactionFo
     // MARK: - TransactionFormProvider
     let transactionsService: TransactionsService
     let categoriesService: CategoriesService
+    let bankAccountsService: BankAccountsService
     
     // MARK: - Redux State
     private(set) var state: TransactionFormState
@@ -62,12 +60,14 @@ final class TransactionFormViewModelImp: TransactionFormViewModel, TransactionFo
     // MARK: - Init
     init(
         mode: TransactionFormMode,
-        transactionsService: TransactionsService = TransactionsServiceImp(),
-        categoriesService: CategoriesService = CategoriesServiceImp()
+        transactionsService: TransactionsService = ServiceFactory.shared.createTransactionsService(),
+        categoriesService: CategoriesService = ServiceFactory.shared.createCategoriesService(),
+        bankAccountsService: BankAccountsService = ServiceFactory.shared.createBankAccountsService()
     ) {
         self.mode = mode
         self.transactionsService = transactionsService
         self.categoriesService = categoriesService
+        self.bankAccountsService = bankAccountsService
         self.state = TransactionFormState()
         
         setupInitialState()
@@ -87,7 +87,7 @@ final class TransactionFormViewModelImp: TransactionFormViewModel, TransactionFo
         
         do {
             let direction = mode.direction
-            let categories = try await categoriesService.fetchCategories(for: direction)
+            let categories = try await fetchCategories(for: direction)
             dispatch(.categoriesLoaded(categories))
             
             if case .edit(let transaction) = mode {
@@ -192,13 +192,26 @@ final class TransactionFormViewModelImp: TransactionFormViewModel, TransactionFo
     }
     
     private func performSave() async throws {
-        let request = createTransactionRequest()
-        
-        switch mode {
-        case .create:
-            _ = try await transactionsService.post(request: request)
-        case .edit(let transaction):
-            _ = try await transactionsService.update(transactionId: transaction.id, request: request)
+        do {
+            let transaction = try await createTransaction()
+            
+            switch mode {
+            case .create:
+                _ = try await post(transaction: transaction)
+            case .edit(let existingTransaction):
+                let updatedTransaction = Transaction(
+                    id: existingTransaction.id,
+                    account: transaction.account,
+                    category: transaction.category,
+                    amount: transaction.amount,
+                    transactionDate: transaction.transactionDate,
+                    comment: transaction.comment
+                )
+                _ = try await update(transaction: updatedTransaction)
+            }
+            
+        } catch {
+            print(error.localizedDescription)
         }
     }
     
@@ -208,14 +221,14 @@ final class TransactionFormViewModelImp: TransactionFormViewModel, TransactionFo
         dispatch(.deleteStarted)
         
         do {
-            try await transactionsService.delete(transactionId: transaction.id)
+            try await delete(transactionId: transaction.id)
             dispatch(.deleteCompleted)
         } catch {
             dispatch(.deleteFailed(error.localizedDescription))
         }
     }
     
-    private func createTransactionRequest() -> TransactionRequest {
+    private func createTransaction() async throws -> Transaction {
         let dateTime = combineDateAndTime(date: state.date, time: state.time)
         
         let formatter = NumberFormatter()
@@ -234,11 +247,14 @@ final class TransactionFormViewModelImp: TransactionFormViewModel, TransactionFo
             amount = "0.00"
         }
         
-        return TransactionRequest(
-            accountId: 1, // TODO: Get from current account
-            categoryId: state.selectedCategory?.id ?? 0,
-            amount: amount,
-            transactionDate: ISO8601DateFormatter.isoDateFormatter.string(from: dateTime),
+        let account = try await fetchCurrentAccount()
+        
+        return Transaction(
+            id: 0, // Временный ID, будет заменен в TransactionsService
+            account: account,
+            category: state.selectedCategory ?? Category(id: 0, name: "", emoji: "💰", isIncome: mode.direction),
+            amount: Decimal(string: amount) ?? 0,
+            transactionDate: dateTime,
             comment: state.comment.isEmpty ? nil : state.comment
         )
     }

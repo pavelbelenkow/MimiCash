@@ -15,10 +15,10 @@ protocol BankAccountViewModel {
 }
 
 @Observable
-final class BankAccountViewModelImp: BankAccountViewModel {
+final class BankAccountViewModelImp: BankAccountViewModel, BankAccountsProvider {
     
-    // MARK: - Private Properties
-    private let service: BankAccountsService
+    // MARK: - BankAccountsProvider Properties
+    let bankAccountsService: BankAccountsService
     
     // MARK: - Properties
     var viewState: ViewState<BankAccount>
@@ -26,11 +26,11 @@ final class BankAccountViewModelImp: BankAccountViewModel {
     
     // MARK: - Init
     init(
-        service: BankAccountsService = BankAccountsServiceImp(),
+        bankAccountsService: BankAccountsService = ServiceFactory.shared.createBankAccountsService(),
         viewState: ViewState<BankAccount> = .idle,
         state: BankAccountState = BankAccountState()
     ) {
-        self.service = service
+        self.bankAccountsService = bankAccountsService
         self.viewState = viewState
         self.state = state
     }
@@ -40,7 +40,7 @@ final class BankAccountViewModelImp: BankAccountViewModel {
         viewState = .loading
         
         do {
-            let account = try await service.fetchCurrentAccount()
+            let account = try await fetchCurrentAccount()
             viewState = .success(account)
             
             state.balanceInput = account.balance.stringValue
@@ -68,7 +68,7 @@ final class BankAccountViewModelImp: BankAccountViewModel {
         )
         
         do {
-            let result = try await service.update(account: updatedAccount)
+            let result = try await update(account: updatedAccount)
             viewState = .success(result)
             state.isEditing = false
         } catch {
