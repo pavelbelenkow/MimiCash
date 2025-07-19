@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 @main
 struct MimiCashApp: App {
@@ -11,6 +12,7 @@ struct MimiCashApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(AppModelContainer.shared.getModelContainer())
     }
     
     private func setupBearerToken(_ token: String) {
