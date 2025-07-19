@@ -56,7 +56,7 @@ final class AnalysisViewModelImp: AnalysisViewModel, TransactionsProvider, BankA
         
         do {
             let account = try await fetchCurrentAccount()
-            let output = await fetchTransactions(
+            let output = try await fetchTransactions(
                 accountId: account.id,
                 from: startDate,
                 to: endDate,

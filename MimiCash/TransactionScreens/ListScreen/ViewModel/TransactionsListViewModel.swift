@@ -54,7 +54,7 @@ final class TransactionsListViewModelImp: TransactionsListViewModel, Transaction
         do {
             let account = try await fetchCurrentAccount()
             
-            let output = await fetchTransactions(
+            let output = try await fetchTransactions(
                 accountId: account.id,
                 from: startDate,
                 to: endDate, 

@@ -54,8 +54,8 @@ final class TransactionsHistoryViewModelImp: TransactionsHistoryViewModel, Trans
         
         do {
             let account = try await fetchCurrentAccount()
-            let output = await fetchTransactions(
-                accountId: account.id, 
+            let output = try await fetchTransactions(
+                accountId: account.id,
                 from: startDate, 
                 to: endDate, 
                 direction: direction

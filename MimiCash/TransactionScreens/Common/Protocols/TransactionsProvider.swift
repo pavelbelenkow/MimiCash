@@ -10,7 +10,7 @@ protocol TransactionsProvider {
         from startDate: Date,
         to endDate: Date,
         direction: Direction
-    ) async -> TransactionsOutput
+    ) async throws -> TransactionsOutput
     
     func post(transaction: Transaction) async throws -> Transaction
     func update(transaction: Transaction) async throws -> Transaction
@@ -26,8 +26,8 @@ extension TransactionsProvider {
         from startDate: Date,
         to endDate: Date,
         direction: Direction
-    ) async -> TransactionsOutput {
-        let transactions = await transactionsService.fetchTransactions(
+    ) async throws -> TransactionsOutput {
+        let transactions = try await transactionsService.fetchTransactions(
             accountId: accountId,
             from: startDate,
             to: endDate
