@@ -4,6 +4,8 @@ import SwiftData
 @main
 struct MimiCashApp: App {
     
+    @State private var networkMonitor = NetworkMonitorImpl.shared
+    
     init() {
         setupBearerToken("YOUR_BEARER_TOKEN_HERE")
     }
@@ -11,6 +13,8 @@ struct MimiCashApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .networkMonitor(networkMonitor)
+                .offlineIndicator()
         }
         .modelContainer(AppModelContainer.shared.getModelContainer())
     }
