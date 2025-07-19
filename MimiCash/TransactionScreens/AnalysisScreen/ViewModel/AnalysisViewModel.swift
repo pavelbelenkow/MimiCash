@@ -11,10 +11,13 @@ protocol AnalysisViewModel: TransactionsViewModel, TransactionsSortable, DateRan
 }
 
 @Observable
-final class AnalysisViewModelImp: AnalysisViewModel, TransactionsProvider {
+final class AnalysisViewModelImp: AnalysisViewModel, TransactionsProvider, BankAccountsProvider {
     
     // MARK: - TransactionsProvider Properties
-    let service: TransactionsService
+    let transactionsService: TransactionsService
+    
+    // MARK: - BankAccountsProvider Properties
+    let bankAccountsService: BankAccountsService
     
     // MARK: - TransactionsViewModel Properties
     let direction: Direction
@@ -33,11 +36,13 @@ final class AnalysisViewModelImp: AnalysisViewModel, TransactionsProvider {
     
     // MARK: - Init
     init(
-        service: TransactionsService = TransactionsServiceImp(),
+        transactionsService: TransactionsService = ServiceFactory.shared.createTransactionsService(),
+        bankAccountsService: BankAccountsService = ServiceFactory.shared.createBankAccountsService(),
         direction: Direction,
         state: ViewState<TransactionsOutput> = .idle
     ) {
-        self.service = service
+        self.transactionsService = transactionsService
+        self.bankAccountsService = bankAccountsService
         self.direction = direction
         self.state = state
     }
@@ -50,10 +55,11 @@ final class AnalysisViewModelImp: AnalysisViewModel, TransactionsProvider {
         state = .loading
         
         do {
-            let output = try await fetchTransactions(
-                accountId: 1, 
-                from: startDate, 
-                to: endDate, 
+            let account = try await fetchCurrentAccount()
+            let output = await fetchTransactions(
+                accountId: account.id,
+                from: startDate,
+                to: endDate,
                 direction: direction
             )
             state = .success(output)

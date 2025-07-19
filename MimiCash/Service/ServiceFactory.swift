@@ -17,9 +17,8 @@ final class ServiceFactory {
         self.syncStatusManager = SyncStatusManager.shared
     }
     
-    // MARK: - Public Methods
+    // MARK: - Methods
     
-    /// Создает экземпляр TransactionsService с правильными зависимостями
     func createTransactionsService() -> TransactionsService {
         let bankAccountsService = createBankAccountsService()
         let serviceCoordinator = ServiceCoordinatorImp(
