@@ -14,6 +14,8 @@ protocol NetworkMonitor {
 @Observable
 final class NetworkMonitorImpl: NetworkMonitor {
     
+    static let shared = NetworkMonitorImpl()
+    
     // MARK: - Private Properties
     private let monitor = NWPathMonitor()
     private let queue = DispatchQueue(label: "NetworkMonitor")

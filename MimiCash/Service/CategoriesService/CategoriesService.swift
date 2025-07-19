@@ -13,42 +13,45 @@ protocol CategoriesService {
 final class CategoriesServiceImp: CategoriesService {
     
     // MARK: - Private Properties
+    private let networkAwareService: NetworkAwareService
     private let networkClient: NetworkClient
     private let storage: CategoriesStorage
     
     // MARK: - Init
     init(
+        networkAwareService: NetworkAwareService = NetworkAwareServiceImpl(),
         networkClient: NetworkClient = NetworkClientImpl(),
         storage: CategoriesStorage = AppModelContainer.shared.categoriesStorage()
     ) {
+        self.networkAwareService = networkAwareService
         self.networkClient = networkClient
         self.storage = storage
     }
     
     func fetchAllCategories() async throws -> [Category] {
-        do {
-            let serverCategories = try await fetchAllFromServer()
-            
-            await saveCategoriesToStorage(serverCategories)
-            
-            return serverCategories
-            
-        } catch {
-            return await storage.categories
-        }
+        return try await networkAwareService.executeWithFallback(
+            networkOperation: {
+                let serverCategories = try await fetchAllFromServer()
+                await saveCategoriesToStorage(serverCategories)
+                return serverCategories
+            },
+            fallbackOperation: {
+                return await storage.categories
+            }
+        )
     }
     
     func fetchCategories(for direction: Direction) async throws -> [Category] {
-        do {
-            let serverCategories = try await fetchFromServer(for: direction)
-            
-            await saveCategoriesToStorage(serverCategories)
-            
-            return serverCategories
-            
-        } catch {
-            return await storage.getCategories(for: direction)
-        }
+        return try await networkAwareService.executeWithFallback(
+            networkOperation: {
+                let serverCategories = try await fetchFromServer(for: direction)
+                await saveCategoriesToStorage(serverCategories)
+                return serverCategories
+            },
+            fallbackOperation: {
+                return await storage.getCategories(for: direction)
+            }
+        )
     }
 }
 

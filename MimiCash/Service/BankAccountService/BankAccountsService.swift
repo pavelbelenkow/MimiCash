@@ -12,17 +12,22 @@ protocol BankAccountsService {
 
 final class BankAccountsServiceImp: BankAccountsService {
     
+    // MARK: - Private Properties
+    private let networkAwareService: NetworkAwareService
     private let networkClient: NetworkClient
     private let storage: BankAccountsStorage
     private let backupStorage: BackupStorage
     private let syncStatusManager: SyncStatusManager
     
+    // MARK: - Init
     init(
+        networkAwareService: NetworkAwareService = NetworkAwareServiceImpl(),
         networkClient: NetworkClient = NetworkClientImpl(),
         storage: BankAccountsStorage,
         backupStorage: BackupStorage,
         syncStatusManager: SyncStatusManager = SyncStatusManager.shared
     ) {
+        self.networkAwareService = networkAwareService
         self.networkClient = networkClient
         self.storage = storage
         self.backupStorage = backupStorage
@@ -32,46 +37,51 @@ final class BankAccountsServiceImp: BankAccountsService {
     func fetchCurrentAccount() async throws -> BankAccount {
         await syncAllBackupOperations()
         
-        do {
-            let serverAccount = try await fetchFromServer()
-            await saveAccountToStorage(serverAccount)
-            
-            return serverAccount
-            
-        } catch {
-            if let localAccount = await storage.getCurrentAccount() {
+        return try await networkAwareService.executeWithFallback(
+            networkOperation: {
+                let serverAccount = try await fetchFromServer()
+                await saveAccountToStorage(serverAccount)
+                return serverAccount
+            },
+            fallbackOperation: {
+                guard let localAccount = await storage.getCurrentAccount() else {
+                    throw NetworkError.notFound
+                }
                 return localAccount
-            } else {
-                throw NetworkError.notFound
             }
-        }
+        )
     }
     
     func update(account: BankAccount) async throws -> BankAccount {
-        do {
-            let body = account.toAccountUpdateBody()
-            let serverAccount = try await updateAccountRequest(body, accountId: account.id)
-            
-            await storage.update(serverAccount)
-            await backupStorage.removeBackupOperations(entityId: account.id, entityType: .account)
-            
-            return serverAccount
-            
-        } catch {
-            let accountData = account.toAccountUpdateBody()
-            let backupOperation = BackupOperation(
-                entityId: account.id,
-                entityType: .account,
-                operationType: .update,
-                transactionData: nil,
-                accountData: accountData
-            )
-            
-            await backupStorage.addBackupOperation(backupOperation)
-            await storage.update(account)
-            
-            return account
-        }
+        return try await networkAwareService.executeWithFallback(
+            networkOperation: {
+                let body = account.toAccountUpdateBody()
+                let serverAccount = try await updateAccountRequest(body, accountId: account.id)
+                
+                await storage.update(serverAccount)
+                await backupStorage.removeBackupOperations(
+                    entityId: account.id,
+                    entityType: .account
+                )
+                
+                return serverAccount
+            },
+            fallbackOperation: {
+                let accountData = account.toAccountUpdateBody()
+                let backupOperation = BackupOperation(
+                    entityId: account.id,
+                    entityType: .account,
+                    operationType: .update,
+                    transactionData: nil,
+                    accountData: accountData
+                )
+                
+                await backupStorage.addBackupOperation(backupOperation)
+                await storage.update(account)
+                
+                return account
+            }
+        )
     }
 }
 

@@ -8,7 +8,7 @@ protocol TransactionsService {
         accountId: Int,
         from startDate: Date,
         to endDate: Date
-    ) async -> [Transaction]
+    ) async throws -> [Transaction]
     
     func post(transaction: Transaction) async throws -> Transaction
     
@@ -21,6 +21,7 @@ protocol TransactionsService {
 final class TransactionsServiceImp: TransactionsService {
     
     // MARK: - Private Properties
+    private let networkAwareService: NetworkAwareService
     private let networkClient: NetworkClient
     private let storage: TransactionsStorage
     private let categoriesStorage: CategoriesStorage
@@ -31,6 +32,7 @@ final class TransactionsServiceImp: TransactionsService {
     
     // MARK: - Init
     init(
+        networkAwareService: NetworkAwareService = NetworkAwareServiceImpl(),
         networkClient: NetworkClient = NetworkClientImpl(),
         storage: TransactionsStorage,
         categoriesStorage: CategoriesStorage,
@@ -39,6 +41,7 @@ final class TransactionsServiceImp: TransactionsService {
         syncStatusManager: SyncStatusManager = SyncStatusManager.shared,
         serviceCoordinator: ServiceCoordinator? = nil
     ) {
+        self.networkAwareService = networkAwareService
         self.networkClient = networkClient
         self.storage = storage
         self.categoriesStorage = categoriesStorage
@@ -52,138 +55,171 @@ final class TransactionsServiceImp: TransactionsService {
         accountId: Int,
         from startDate: Date,
         to endDate: Date
-    ) async -> [Transaction] {
-        let syncedOperationIds = await syncAllBackupOperations()
+    ) async throws -> [Transaction] {
+        _ = await syncAllBackupOperations()
+        
         let backupOperations = await backupStorage.backupOperations
         syncStatusManager.updateUnsyncedCount(backupOperations.count)
         
-        do {
-            let serverTransactions = try await fetchFromServer(
-                accountId: accountId,
-                from: startDate,
-                to: endDate
-            )
-            
-            await saveTransactionsToStorage(serverTransactions)
-            return serverTransactions.sorted { $0.transactionDate > $1.transactionDate }
-            
-        } catch {
-            let localTransactions = await getTransactionsFromLocalStorage(
-                accountId: accountId,
-                from: startDate,
-                to: endDate
-            )
-            
-            let unsyncedTransactions = await getUnsyncedTransactionsFromBackup(
-                accountId: accountId,
-                from: startDate,
-                to: endDate
-            )
-            
-            var allTransactions = localTransactions
-            
-            for unsyncedTransaction in unsyncedTransactions {
-                if !allTransactions.contains(where: { $0.id == unsyncedTransaction.id }) {
-                    allTransactions.append(unsyncedTransaction)
+        return try await networkAwareService.executeWithFallback(
+            networkOperation: {
+                let serverTransactions = try await fetchFromServer(
+                    accountId: accountId,
+                    from: startDate,
+                    to: endDate
+                )
+                
+                await saveTransactionsToStorage(serverTransactions)
+                
+                return serverTransactions.sorted { $0.transactionDate > $1.transactionDate }
+            },
+            fallbackOperation: {
+                let localTransactions = await self.getTransactionsFromLocalStorage(
+                    accountId: accountId,
+                    from: startDate,
+                    to: endDate
+                )
+                
+                let unsyncedTransactions = await self.getUnsyncedTransactionsFromBackup(
+                    accountId: accountId,
+                    from: startDate,
+                    to: endDate
+                )
+                
+                var allTransactions = localTransactions
+                
+                for unsyncedTransaction in unsyncedTransactions {
+                    if !allTransactions.contains(where: { $0.id == unsyncedTransaction.id }) {
+                        allTransactions.append(unsyncedTransaction)
+                    }
                 }
+                
+                return allTransactions.sorted { $0.transactionDate > $1.transactionDate }
             }
-            
-            return allTransactions.sorted { $0.transactionDate > $1.transactionDate }
-        }
+        )
     }
     
     func post(transaction: Transaction) async throws -> Transaction {
-        do {
-            let transactionData = transaction.toTransactionRequest()
-            let serverTransactionId = try await postTransactionRequest(transactionData)
-            let serverTransaction = await createTransactionFromRequest(transactionData, serverId: serverTransactionId)
-            
-            await storage.create(serverTransaction)
-            await serviceCoordinator?.transactionCreated(serverTransaction)
-            return serverTransaction
-            
-        } catch {
-            let localId = await generateUniqueLocalId()
-            let localTransaction = Transaction(
-                id: localId,
-                account: transaction.account,
-                category: transaction.category,
-                amount: transaction.amount,
-                transactionDate: transaction.transactionDate,
-                comment: transaction.comment
-            )
-            
-            await storage.create(localTransaction)
-            
-            let transactionData = localTransaction.toTransactionRequest()
-            let backupOperation = BackupOperation(
-                entityId: localId,
-                entityType: .transaction,
-                operationType: .create,
-                transactionData: transactionData,
-                accountData: nil
-            )
-            
-            await backupStorage.addBackupOperation(backupOperation)
-            await serviceCoordinator?.transactionCreated(localTransaction)
-            return localTransaction
-        }
+        return try await networkAwareService.executeWithFallback(
+            networkOperation: {
+                let transactionData = transaction.toTransactionRequest()
+                let serverTransactionId = try await postTransactionRequest(transactionData)
+                let serverTransaction = await createTransactionFromRequest(
+                    transactionData,
+                    serverId: serverTransactionId
+                )
+                
+                await storage.create(serverTransaction)
+                await serviceCoordinator?.transactionCreated(serverTransaction)
+                
+                return serverTransaction
+            },
+            fallbackOperation: {
+                let localId = await generateUniqueLocalId()
+                let localTransaction = Transaction(
+                    id: localId,
+                    account: transaction.account,
+                    category: transaction.category,
+                    amount: transaction.amount,
+                    transactionDate: transaction.transactionDate,
+                    comment: transaction.comment
+                )
+                
+                await storage.create(localTransaction)
+                
+                let transactionData = localTransaction.toTransactionRequest()
+                let backupOperation = BackupOperation(
+                    entityId: localId,
+                    entityType: .transaction,
+                    operationType: .create,
+                    transactionData: transactionData,
+                    accountData: nil
+                )
+                
+                await backupStorage.addBackupOperation(backupOperation)
+                await serviceCoordinator?.transactionCreated(localTransaction)
+                
+                return localTransaction
+            }
+        )
     }
     
     func update(transaction: Transaction) async throws -> Transaction {
-        do {
-            let transactionData = transaction.toTransactionRequest()
-            let serverTransaction = try await updateTransactionRequest(transactionId: transaction.id, body: transactionData)
-            
-            await storage.update(serverTransaction)
-            await backupStorage.removeBackupOperations(entityId: transaction.id, entityType: .transaction)
-            return serverTransaction
-            
-        } catch {
-            await storage.update(transaction)
-            
-            let transactionData = transaction.toTransactionRequest()
-            let backupOperation = BackupOperation(
-                entityId: transaction.id,
-                entityType: .transaction,
-                operationType: .update,
-                transactionData: transactionData,
-                accountData: nil
-            )
-            
-            await backupStorage.addBackupOperation(backupOperation)
-            return transaction
-        }
+        return try await networkAwareService.executeWithFallback(
+            networkOperation: {
+                let transactionData = transaction.toTransactionRequest()
+                let serverTransaction = try await updateTransactionRequest(
+                    transactionId: transaction.id,
+                    body: transactionData
+                )
+                
+                await storage.update(serverTransaction)
+                await backupStorage.removeBackupOperations(
+                    entityId: transaction.id,
+                    entityType: .transaction
+                )
+                
+                return serverTransaction
+            },
+            fallbackOperation: {
+                await storage.update(transaction)
+                
+                let transactionData = transaction.toTransactionRequest()
+                let backupOperation = BackupOperation(
+                    entityId: transaction.id,
+                    entityType: .transaction,
+                    operationType: .update,
+                    transactionData: transactionData,
+                    accountData: nil
+                )
+                
+                await backupStorage.addBackupOperation(backupOperation)
+                
+                return transaction
+            }
+        )
     }
     
     func delete(transactionId: Int) async throws {
         let localTransactions = await storage.transactions
+        
         guard let transaction = localTransactions.first(where: { $0.id == transactionId }) else {
             throw NetworkError.notFound
         }
         
         let accountId = transaction.account.id
         
-        do {
-            try await deleteFromServer(transactionId)
-            await storage.delete(id: transactionId)
-            await backupStorage.removeBackupOperations(entityId: transactionId, entityType: .transaction)
-            await serviceCoordinator?.transactionDeleted(transactionId: transactionId, accountId: accountId)
-            
-        } catch {
-            await storage.delete(id: transactionId)
-            
-            let backupOperation = BackupOperation(
-                entityId: transactionId,
-                entityType: .transaction,
-                operationType: .delete,
-                transactionData: nil,
-                accountData: nil
-            )
-            
-            await backupStorage.addBackupOperation(backupOperation)
-            await serviceCoordinator?.transactionDeleted(transactionId: transactionId, accountId: accountId)
-        }
+        return try await networkAwareService.executeWithFallback(
+            networkOperation: {
+                try await deleteFromServer(transactionId)
+                await storage.delete(id: transactionId)
+                await backupStorage.removeBackupOperations(
+                    entityId: transactionId,
+                    entityType: .transaction
+                )
+                await serviceCoordinator?.transactionDeleted(
+                    transactionId: transactionId,
+                    accountId: accountId
+                )
+            },
+            fallbackOperation: {
+                await storage.delete(id: transactionId)
+                
+                let backupOperation = BackupOperation(
+                    entityId: transactionId,
+                    entityType: .transaction,
+                    operationType: .delete,
+                    transactionData: nil,
+                    accountData: nil
+                )
+                
+                await backupStorage.addBackupOperation(backupOperation)
+                await serviceCoordinator?.transactionDeleted(
+                    transactionId: transactionId,
+                    accountId: accountId
+                )
+            }
+        )
     }
 }
 
