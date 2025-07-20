@@ -11,7 +11,8 @@ final class AnalysisViewController: UIViewController {
     }()
     
     private lazy var loadingView: UIActivityIndicatorView = {
-        let indicator = UIActivityIndicatorView(style: .large)
+        let indicator = UIActivityIndicatorView(style: .medium)
+        indicator.color = .navBar
         indicator.translatesAutoresizingMaskIntoConstraints = false
         return indicator
     }()
@@ -46,6 +47,7 @@ final class AnalysisViewController: UIViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
         setupUI()
+        setupBindings()
         loadData()
     }
     
@@ -86,25 +88,43 @@ final class AnalysisViewController: UIViewController {
         ])
     }
     
+    private func setupBindings() {
+        viewModel.stateSubject
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateUI()
+            }
+            .store(in: &viewModel.cancellables)
+        
+        viewModel.sortSubject
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] _ in
+                self?.updateUI()
+            }
+            .store(in: &viewModel.cancellables)
+    }
+    
     private func loadData() {
         Task {
             await viewModel.loadTransactions(
                 from: viewModel.startDate,
                 to: viewModel.endDate
             )
-            
-            await MainActor.run {
-                updateUI()
-            }
         }
     }
     
     private func updateUI() {
         switch viewModel.state {
-        case .idle, .loading:
-            loadingView.startAnimating()
+        case .idle:
+            loadingView.stopAnimating()
             tableView.isHidden = true
             errorLabel.isHidden = true
+        case .loading:
+            loadingView.startAnimating()
+            if tableView.isHidden {
+                tableView.isHidden = true
+                errorLabel.isHidden = true
+            }
         case .error(let message):
             loadingView.stopAnimating()
             tableView.isHidden = true
@@ -158,12 +178,10 @@ extension AnalysisViewController: AnalysisTableViewDelegate {
     
     func handleDateSelection(type: DateSelectionType, date: Date) {
         viewModel.handleDateSelection(type: type, date: date)
-        updateUI()
     }
     
     func handleSortSelection(_ sort: TransactionsSort) {
         viewModel.handleSortSelection(sort)
-        updateUI()
     }
     
     func handleTransactionTap(_ transaction: Transaction) {

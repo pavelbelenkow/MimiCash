@@ -1,17 +1,20 @@
 import Foundation
+import Combine
 
 // MARK: - AnalysisViewModel Protocol
 
 protocol AnalysisViewModel: TransactionsViewModel, TransactionsSortable, DateRangeSelectable {
+    var stateSubject: CurrentValueSubject<ViewState<TransactionsOutput>, Never> { get }
+    var sortSubject: CurrentValueSubject<TransactionsSort, Never> { get }
     var sectionsCount: Int { get }
+    var cancellables: Set<AnyCancellable> { get set }
     
     func numberOfRowsInSection(_ section: Int) -> Int
     func cellType(for indexPath: IndexPath) -> AnalysisCellType
     func handleDateSelection(type: DateSelectionType, date: Date)
 }
 
-@Observable
-final class AnalysisViewModelImp: AnalysisViewModel, TransactionsProvider, BankAccountsProvider {
+final class AnalysisViewModelImp: ObservableObject, AnalysisViewModel, TransactionsProvider, BankAccountsProvider {
     
     // MARK: - TransactionsProvider Properties
     let transactionsService: TransactionsService
@@ -21,11 +24,17 @@ final class AnalysisViewModelImp: AnalysisViewModel, TransactionsProvider, BankA
     
     // MARK: - TransactionsViewModel Properties
     let direction: Direction
-    var state: ViewState<TransactionsOutput>
+    var state: ViewState<TransactionsOutput> {
+        get { stateSubject.value }
+        set { stateSubject.send(newValue) }
+    }
     var title: String { "Анализ" }
     
     // MARK: - TransactionsSortable Properties
-    var sort: TransactionsSort = .date
+    var sort: TransactionsSort {
+        get { sortSubject.value }
+        set { sortSubject.send(newValue) }
+    }
     
     // MARK: - DateRangeSelectable Properties
     var startDate: Date = .monthAgo
@@ -33,6 +42,9 @@ final class AnalysisViewModelImp: AnalysisViewModel, TransactionsProvider, BankA
     
     // MARK: - AnalysisViewModel Properties
     let sectionsCount: Int = 2
+    let stateSubject = CurrentValueSubject<ViewState<TransactionsOutput>, Never>(.idle)
+    let sortSubject = CurrentValueSubject<TransactionsSort, Never>(.date)
+    var cancellables = Set<AnyCancellable>()
     
     // MARK: - Init
     init(
@@ -45,6 +57,11 @@ final class AnalysisViewModelImp: AnalysisViewModel, TransactionsProvider, BankA
         self.bankAccountsService = bankAccountsService
         self.direction = direction
         self.state = state
+    }
+    
+    // MARK: - Deinit
+    deinit {
+        cancellables.forEach { $0.cancel() }
     }
     
     // MARK: - TransactionsViewModel Methods
