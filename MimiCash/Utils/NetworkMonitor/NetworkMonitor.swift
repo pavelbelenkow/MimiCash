@@ -58,7 +58,7 @@ final class NetworkMonitorImpl: NetworkMonitor {
 // MARK: - Environment Key
 
 private struct NetworkMonitorKey: EnvironmentKey {
-    static let defaultValue: NetworkMonitor = NetworkMonitorImpl()
+    static let defaultValue: NetworkMonitor = NetworkMonitorImpl.shared
 }
 
 // MARK: - Environment Values Extension
