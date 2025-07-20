@@ -1,4 +1,5 @@
 import UIKit
+import PieChart
 
 final class AnalysisViewController: UIViewController {
     
@@ -171,6 +172,10 @@ extension AnalysisViewController: AnalysisTableViewDataSource {
     
     func sortedOutput() -> TransactionsOutput? {
         viewModel.sortedOutput
+    }
+    
+    func pieChartEntities() -> [PieChartEntity] {
+        viewModel.pieChartEntities()
     }
 }
 

@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import PieChart
 
 // MARK: - AnalysisViewModel Protocol
 
@@ -12,6 +13,7 @@ protocol AnalysisViewModel: TransactionsViewModel, TransactionsSortable, DateRan
     func numberOfRowsInSection(_ section: Int) -> Int
     func cellType(for indexPath: IndexPath) -> AnalysisCellType
     func handleDateSelection(type: DateSelectionType, date: Date)
+    func pieChartEntities() -> [PieChartEntity]
 }
 
 final class AnalysisViewModelImp: ObservableObject, AnalysisViewModel, TransactionsProvider, BankAccountsProvider {
@@ -41,9 +43,9 @@ final class AnalysisViewModelImp: ObservableObject, AnalysisViewModel, Transacti
     var endDate: Date = .endOfToday
     
     // MARK: - AnalysisViewModel Properties
-    let sectionsCount: Int = 2
     let stateSubject = CurrentValueSubject<ViewState<TransactionsOutput>, Never>(.idle)
     let sortSubject = CurrentValueSubject<TransactionsSort, Never>(.date)
+    let sectionsCount: Int = 3
     var cancellables = Set<AnyCancellable>()
     
     // MARK: - Init
@@ -93,6 +95,10 @@ final class AnalysisViewModelImp: ObservableObject, AnalysisViewModel, Transacti
         case 1:
             guard case .success = state else { return 0 }
             let output = sortedOutput
+            return output?.transactions.isEmpty == true ? 0 : 1
+        case 2:
+            guard case .success = state else { return 0 }
+            let output = sortedOutput
             
             if output?.transactions.isEmpty == true {
                 return 1
@@ -120,6 +126,8 @@ final class AnalysisViewModelImp: ObservableObject, AnalysisViewModel, Transacti
                 return .emptyState
             }
         case 1:
+            return .pieChart
+        case 2:
             if let output = sortedOutput, output.transactions.isEmpty {
                 return .emptyState
             } else {
@@ -142,5 +150,22 @@ final class AnalysisViewModelImp: ObservableObject, AnalysisViewModel, Transacti
         case .end:
             updateEndDate(date)
         }
+    }
+    
+    func pieChartEntities() -> [PieChartEntity] {
+        guard case .success(let output) = state else { return [] }
+        
+        var categoryTotals: [Category: Decimal] = [:]
+        
+        for transaction in output.transactions {
+            let currentTotal = categoryTotals[transaction.category] ?? 0
+            categoryTotals[transaction.category] = currentTotal + transaction.amount
+        }
+        
+        let entities = categoryTotals.map { category, total in
+            PieChartEntity(value: total, label: category.name)
+        }
+        
+        return entities
     }
 }
