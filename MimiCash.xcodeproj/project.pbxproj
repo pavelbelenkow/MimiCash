@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		5939EBE42E2D271100D333E9 /* PieChart in Frameworks */ = {isa = PBXBuildFile; productRef = 5939EBE32E2D271100D333E9 /* PieChart */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		5983206B2DFB735B0083C5EF /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -39,6 +43,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5939EBE42E2D271100D333E9 /* PieChart in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -90,6 +95,7 @@
 			);
 			name = MimiCash;
 			packageProductDependencies = (
+				5939EBE32E2D271100D333E9 /* PieChart */,
 			);
 			productName = MimiCash;
 			productReference = 59195EEF2DF49AFC00104727 /* MimiCash.app */;
@@ -146,6 +152,9 @@
 			);
 			mainGroup = 59195EE62DF49AFC00104727;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				5939EBE22E2D271100D333E9 /* XCLocalSwiftPackageReference "Utilities" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 59195EF02DF49AFC00104727 /* Products */;
 			projectDirPath = "";
@@ -444,6 +453,20 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		5939EBE22E2D271100D333E9 /* XCLocalSwiftPackageReference "Utilities" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Utilities;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		5939EBE32E2D271100D333E9 /* PieChart */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = PieChart;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 59195EE72DF49AFC00104727 /* Project object */;
 }
