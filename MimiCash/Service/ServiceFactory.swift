@@ -22,8 +22,7 @@ final class ServiceFactory {
     func createTransactionsService() -> TransactionsService {
         let bankAccountsService = createBankAccountsService()
         let serviceCoordinator = ServiceCoordinatorImp(
-            bankAccountsService: bankAccountsService,
-            backupStorage: modelContainer.backupStorage()
+            bankAccountsService: bankAccountsService
         )
         
         return TransactionsServiceImp(
@@ -31,7 +30,6 @@ final class ServiceFactory {
             categoriesStorage: modelContainer.categoriesStorage(),
             bankAccountsStorage: modelContainer.bankAccountsStorage(),
             backupStorage: modelContainer.backupStorage(),
-            syncStatusManager: syncStatusManager,
             serviceCoordinator: serviceCoordinator
         )
     }
@@ -40,7 +38,6 @@ final class ServiceFactory {
         return BankAccountsServiceImp(
             storage: modelContainer.bankAccountsStorage(),
             backupStorage: modelContainer.backupStorage(),
-            syncStatusManager: syncStatusManager
         )
     }
     
