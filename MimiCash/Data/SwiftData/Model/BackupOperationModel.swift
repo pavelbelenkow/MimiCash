@@ -7,8 +7,7 @@ final class BackupOperationModel {
     var entityId: Int
     var entityType: String
     var operationType: String
-    var transactionData: Data?
-    var accountData: Data?
+    var payload: Data?
     var timestamp: Date
     
     init(from backupOperation: BackupOperation) {
@@ -16,15 +15,8 @@ final class BackupOperationModel {
         self.entityId = backupOperation.entityId
         self.entityType = backupOperation.entityType.rawValue
         self.operationType = backupOperation.operationType.rawValue
+        self.payload = backupOperation.payload
         self.timestamp = backupOperation.timestamp
-        
-        if let transactionData = backupOperation.transactionData {
-            self.transactionData = try? JSONEncoder().encode(transactionData)
-        }
-        
-        if let accountData = backupOperation.accountData {
-            self.accountData = try? JSONEncoder().encode(accountData)
-        }
     }
     
     func toBackupOperation() -> BackupOperation? {
@@ -33,23 +25,13 @@ final class BackupOperationModel {
             print("Invalid entityType or operationType: \(entityType), \(operationType)")
             return nil
         }
-        
-        var transactionData: TransactionRequestBody?
-        if let data = self.transactionData {
-            transactionData = try? JSONDecoder().decode(TransactionRequestBody.self, from: data)
-        }
-        
-        var accountData: AccountUpdateBody?
-        if let data = self.accountData {
-            accountData = try? JSONDecoder().decode(AccountUpdateBody.self, from: data)
-        }
-        
         return BackupOperation(
+            id: id,
             entityId: entityId,
             entityType: entityType,
             operationType: operationType,
-            transactionData: transactionData,
-            accountData: accountData
+            payload: payload,
+            timestamp: timestamp
         )
     }
 } 
