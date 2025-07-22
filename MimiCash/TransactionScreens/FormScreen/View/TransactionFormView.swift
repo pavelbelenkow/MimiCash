@@ -45,14 +45,14 @@ struct TransactionFormView: View {
                         }
                     }
                     DateRow(
-                        date: .constant(viewModel.state.date),
+                        date: dateBinding,
                         onDateChange: { 
                             viewModel.dispatch(.dateChanged($0))
                             focusedField = nil
                         }
                     )
                     TimeRow(
-                        time: .constant(viewModel.state.time),
+                        time: timeBinding,
                         date: viewModel.state.date,
                         onTimeChange: { 
                             viewModel.dispatch(.timeChanged($0))
@@ -170,6 +170,20 @@ struct TransactionFormView: View {
         Binding(
             get: { viewModel.state.amount },
             set: { viewModel.dispatch(.amountChanged($0)) }
+        )
+    }
+    
+    private var dateBinding: Binding<Date> {
+        Binding(
+            get: { viewModel.state.date },
+            set: { viewModel.dispatch(.dateChanged($0)) }
+        )
+    }
+    
+    private var timeBinding: Binding<Date> {
+        Binding(
+            get: { viewModel.state.time },
+            set: { viewModel.dispatch(.timeChanged($0)) }
         )
     }
     
