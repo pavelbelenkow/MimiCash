@@ -8,6 +8,10 @@ protocol BankAccountsService {
     
     /// Возвращает обновленный счет, переданный в аргумент `BankAccount`
     func update(account: BankAccount) async throws -> BankAccount
+    
+    func applyLocalTransactionCreated(_ transaction: Transaction) async throws -> BankAccount
+    func applyLocalTransactionUpdated(old oldTransaction: Transaction, new newTransaction: Transaction) async throws -> BankAccount
+    func applyLocalTransactionDeleted(_ transaction: Transaction) async throws -> BankAccount
 }
 
 final class BankAccountsServiceImp: BankAccountsService {
@@ -17,30 +21,35 @@ final class BankAccountsServiceImp: BankAccountsService {
     private let networkClient: NetworkClient
     private let storage: BankAccountsStorage
     private let backupStorage: BackupStorage
-    private let syncStatusManager: SyncStatusManager
+    private let decoder: JSONDecoder = JSONDecoder()
+    private let encoder: JSONEncoder = JSONEncoder()
     
     // MARK: - Init
     init(
         networkAwareService: NetworkAwareService = NetworkAwareServiceImpl(),
         networkClient: NetworkClient = NetworkClientImpl(),
         storage: BankAccountsStorage,
-        backupStorage: BackupStorage,
-        syncStatusManager: SyncStatusManager = SyncStatusManager.shared
+        backupStorage: BackupStorage
     ) {
         self.networkAwareService = networkAwareService
         self.networkClient = networkClient
         self.storage = storage
         self.backupStorage = backupStorage
-        self.syncStatusManager = syncStatusManager
     }
 
     func fetchCurrentAccount() async throws -> BankAccount {
-        await syncAllBackupOperations()
+        await syncBackupOperations()
         
         return try await networkAwareService.executeWithFallback(
             networkOperation: {
                 let serverAccount = try await fetchFromServer()
+                
                 await saveAccountToStorage(serverAccount)
+                await backupStorage.removeBackupOperations(
+                    entityId: serverAccount.id,
+                    entityType: .account
+                )
+                
                 return serverAccount
             },
             fallbackOperation: {
@@ -60,116 +69,38 @@ final class BankAccountsServiceImp: BankAccountsService {
                 
                 await storage.update(serverAccount)
                 await backupStorage.removeBackupOperations(
-                    entityId: account.id,
+                    entityId: serverAccount.id,
                     entityType: .account
                 )
                 
                 return serverAccount
             },
             fallbackOperation: {
-                let accountData = account.toAccountUpdateBody()
-                let backupOperation = BackupOperation(
+                await storage.update(account)
+                
+                let body = account.toAccountUpdateBody()
+                let payload = try? encoder.encode(body)
+                let backupOp = BackupOperation(
                     entityId: account.id,
                     entityType: .account,
                     operationType: .update,
-                    transactionData: nil,
-                    accountData: accountData
+                    payload: payload,
+                    timestamp: Date()
                 )
                 
-                await backupStorage.addBackupOperation(backupOperation)
-                await storage.update(account)
+                await backupStorage.addBackupOperation(backupOp)
                 
                 return account
             }
         )
     }
+    
+        
+        
+    }
 }
 
 private extension BankAccountsServiceImp {
-    
-    func syncAllBackupOperations() async {
-        let backupOperations = await backupStorage.backupOperations
-        
-        guard !backupOperations.isEmpty else { return }
-        
-        syncStatusManager.updateStatus(.syncing)
-        syncStatusManager.updateProgress(SyncProgress(
-            totalOperations: backupOperations.count,
-            completedOperations: 0,
-            currentOperation: "Подготовка синхронизации..."
-        ))
-        
-        var syncedOperationIds: [String] = []
-        
-        let accountOperations = backupOperations.filter { $0.entityType == .account }
-        
-        for (index, operation) in accountOperations.enumerated() {
-            syncStatusManager.updateProgress(SyncProgress(
-                totalOperations: accountOperations.count,
-                completedOperations: index,
-                currentOperation: "Синхронизация операции \(operation.entityId)..."
-            ))
-            
-            do {
-                switch operation.operationType {
-                case .update:
-                    if let accountData = operation.accountData {
-                        let serverAccount = try await updateAccountRequest(accountData, accountId: operation.entityId)
-                        
-                        await storage.update(serverAccount)
-                        
-                        syncedOperationIds.append(operation.id)
-                    }
-                    
-                default:
-                    break
-                }
-                
-            } catch {
-                print("Failed to sync backup operation \(operation.id): \(error)")
-                
-                if let networkError = error as? NetworkError {
-                    switch networkError {
-                    case .conflict:
-                        let conflictInfo = ConflictInfo(
-                            entityId: operation.entityId,
-                            entityType: operation.entityType.rawValue,
-                            localVersion: "local",
-                            serverVersion: "server",
-                            message: "Конфликт при синхронизации счета \(operation.entityId)"
-                        )
-                        syncStatusManager.updateStatus(.conflict(conflictInfo))
-                        return
-                    default:
-                        break
-                    }
-                }
-            }
-        }
-        
-        syncStatusManager.updateProgress(SyncProgress(
-            totalOperations: accountOperations.count,
-            completedOperations: accountOperations.count,
-            currentOperation: "Синхронизация завершена"
-        ))
-        
-        for operationId in syncedOperationIds {
-            await backupStorage.removeBackupOperation(id: operationId)
-        }
-        
-        let remainingOperations = await backupStorage.backupOperations
-        syncStatusManager.updateUnsyncedCount(remainingOperations.count)
-        
-        if remainingOperations.isEmpty {
-            syncStatusManager.updateStatus(.completed)
-        } else {
-            syncStatusManager.updateStatus(
-                .failed(
-                    ErrorEquatable(SyncError.unsyncedOperations(remainingOperations.count))
-                )
-            )
-        }
-    }
     
     func saveAccountToStorage(_ account: BankAccount) async {
         let existingAccounts = await storage.accounts
@@ -225,5 +156,139 @@ private extension BankAccountsServiceImp {
         )
         
         return response.toBankAccount()
+    }
+
+    func syncBackupOperations() async {
+        let backupOperations = await backupStorage.backupOperations
+        
+        for operation in backupOperations where operation.entityType == .account {
+            
+            do {
+                if let data = operation.payload {
+                    let body = try decoder.decode(AccountUpdateBody.self, from: data)
+                    
+                    switch operation.operationType {
+                    case .update:
+                        let request = UpdateAccountRequest(
+                            accountId: operation.entityId,
+                            body: body
+                        )
+                        _ = try await networkClient.execute(
+                            request,
+                            responseType: AccountResponse.self
+                        )
+                    default: break
+                    }
+                }
+                print("Synced and removed backup operation: \(operation.id) for accountId: \(operation.entityId)")
+                
+                await backupStorage.removeBackupOperation(id: operation.id)
+            } catch {
+                print("[FAIL] Failed to sync backup operation: \(operation.id), accountId: \(operation.entityId), error: \(error)")
+                
+                continue
+            }
+        }
+    }
+}
+
+extension BankAccountsServiceImp {
+    
+    func applyLocalTransactionCreated(_ transaction: Transaction) async throws -> BankAccount {
+        guard var account = await storage.getCurrentAccount() else {
+            throw NetworkError.notFound
+        }
+        
+        switch transaction.category.isIncome {
+        case .income:
+            account = BankAccount(
+                id: account.id,
+                name: account.name,
+                balance: account.balance + transaction.amount,
+                currency: account.currency
+            )
+        case .outcome:
+            account = BankAccount(
+                id: account.id,
+                name: account.name,
+                balance: account.balance - transaction.amount,
+                currency: account.currency
+            )
+        }
+        
+        await storage.update(account)
+        return account
+    }
+
+    func applyLocalTransactionUpdated(
+        old oldTransaction: Transaction,
+        new newTransaction: Transaction
+    ) async throws -> BankAccount {
+        guard var account = await storage.getCurrentAccount() else {
+            throw NetworkError.notFound
+        }
+        
+        switch oldTransaction.category.isIncome {
+        case .income:
+            account = BankAccount(
+                id: account.id,
+                name: account.name,
+                balance: account.balance - oldTransaction.amount,
+                currency: account.currency
+            )
+        case .outcome:
+            account = BankAccount(
+                id: account.id,
+                name: account.name,
+                balance: account.balance + oldTransaction.amount,
+                currency: account.currency
+            )
+        }
+        
+        switch newTransaction.category.isIncome {
+        case .income:
+            account = BankAccount(
+                id: account.id,
+                name: account.name,
+                balance: account.balance + newTransaction.amount,
+                currency: account.currency
+            )
+        case .outcome:
+            account = BankAccount(
+                id: account.id,
+                name: account.name,
+                balance: account.balance - newTransaction.amount,
+                currency: account.currency
+            )
+        }
+        
+        await storage.update(account)
+        return account
+    }
+    
+    func applyLocalTransactionDeleted(_ transaction: Transaction) async throws -> BankAccount {
+        guard var account = await storage.getCurrentAccount() else {
+            throw NetworkError.notFound
+        }
+        
+        switch transaction.category.isIncome {
+        case .income:
+            account = BankAccount(
+                id: account.id,
+                name: account.name,
+                balance: account.balance - transaction.amount,
+                currency: account.currency
+            )
+        case .outcome:
+            account = BankAccount(
+                id: account.id,
+                name: account.name,
+                balance: account.balance + transaction.amount,
+                currency: account.currency
+            )
+        }
+        
+        await storage.update(account)
+        return account
     }
 }
