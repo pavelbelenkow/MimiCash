@@ -6,8 +6,19 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXContainerItemProxy section */
+		5983206B2DFB735B0083C5EF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 59195EE72DF49AFC00104727 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 59195EEE2DF49AFC00104727;
+			remoteInfo = MimiCash;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		59195EEF2DF49AFC00104727 /* MimiCash.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MimiCash.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		598320672DFB735B0083C5EF /* MimiCashTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MimiCashTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -16,10 +27,22 @@
 			path = MimiCash;
 			sourceTree = "<group>";
 		};
+		598320682DFB735B0083C5EF /* MimiCashTests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = MimiCashTests;
+			sourceTree = "<group>";
+		};
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		59195EEC2DF49AFC00104727 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		598320642DFB735B0083C5EF /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -33,6 +56,7 @@
 			isa = PBXGroup;
 			children = (
 				59195EF12DF49AFC00104727 /* MimiCash */,
+				598320682DFB735B0083C5EF /* MimiCashTests */,
 				59195EF02DF49AFC00104727 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -41,6 +65,7 @@
 			isa = PBXGroup;
 			children = (
 				59195EEF2DF49AFC00104727 /* MimiCash.app */,
+				598320672DFB735B0083C5EF /* MimiCashTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -70,6 +95,29 @@
 			productReference = 59195EEF2DF49AFC00104727 /* MimiCash.app */;
 			productType = "com.apple.product-type.application";
 		};
+		598320662DFB735B0083C5EF /* MimiCashTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 5983206D2DFB735B0083C5EF /* Build configuration list for PBXNativeTarget "MimiCashTests" */;
+			buildPhases = (
+				598320632DFB735B0083C5EF /* Sources */,
+				598320642DFB735B0083C5EF /* Frameworks */,
+				598320652DFB735B0083C5EF /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				5983206C2DFB735B0083C5EF /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				598320682DFB735B0083C5EF /* MimiCashTests */,
+			);
+			name = MimiCashTests;
+			packageProductDependencies = (
+			);
+			productName = MimiCashTests;
+			productReference = 598320672DFB735B0083C5EF /* MimiCashTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -82,6 +130,10 @@
 				TargetAttributes = {
 					59195EEE2DF49AFC00104727 = {
 						CreatedOnToolsVersion = 16.3;
+					};
+					598320662DFB735B0083C5EF = {
+						CreatedOnToolsVersion = 16.3;
+						TestTargetID = 59195EEE2DF49AFC00104727;
 					};
 				};
 			};
@@ -100,12 +152,20 @@
 			projectRoot = "";
 			targets = (
 				59195EEE2DF49AFC00104727 /* MimiCash */,
+				598320662DFB735B0083C5EF /* MimiCashTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
 		59195EED2DF49AFC00104727 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		598320652DFB735B0083C5EF /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -122,7 +182,22 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		598320632DFB735B0083C5EF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		5983206C2DFB735B0083C5EF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 59195EEE2DF49AFC00104727 /* MimiCash */;
+			targetProxy = 5983206B2DFB735B0083C5EF /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		59195EF82DF49AFD00104727 /* Debug */ = {
@@ -304,6 +379,40 @@
 			};
 			name = Release;
 		};
+		5983206E2DFB735B0083C5EF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pavelbelenkow.MimiCashTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MimiCash.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MimiCash";
+			};
+			name = Debug;
+		};
+		5983206F2DFB735B0083C5EF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.pavelbelenkow.MimiCashTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/MimiCash.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/MimiCash";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -321,6 +430,15 @@
 			buildConfigurations = (
 				59195EFB2DF49AFD00104727 /* Debug */,
 				59195EFC2DF49AFD00104727 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		5983206D2DFB735B0083C5EF /* Build configuration list for PBXNativeTarget "MimiCashTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				5983206E2DFB735B0083C5EF /* Debug */,
+				5983206F2DFB735B0083C5EF /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

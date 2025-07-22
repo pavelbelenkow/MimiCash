@@ -1,0 +1,76 @@
+import Foundation
+
+// MARK: - TransactionsListViewModel Protocol
+
+protocol TransactionsListViewModel: TransactionsViewModel {
+    var isHistoryPresented: Bool { get set }
+    var isAddTransactionPresented: Bool { get set }
+    
+    func presentTransactionHistory()
+    func presentAddTransaction()
+}
+
+@Observable
+final class TransactionsListViewModelImp: TransactionsListViewModel, TransactionsProvider, BankAccountsProvider {
+    
+    // MARK: - TransactionsProvider Properties
+    let transactionsService: TransactionsService
+    
+    // MARK: - BankAccountsProvider Properties
+    let bankAccountsService: BankAccountsService
+    
+    // MARK: - TransactionsViewModel Properties
+    let direction: Direction
+    var state: ViewState<TransactionsOutput>
+    var title: String {
+        (direction == .income ?
+        Tab.incomes.label : Tab.outcomes.label) + " cегодня"
+    }
+    
+    // MARK: - TransactionsListViewModel Properties
+    var isHistoryPresented: Bool = false
+    var isAddTransactionPresented: Bool = false
+    
+    // MARK: - Init
+    init(
+        transactionsService: TransactionsService = ServiceFactory.shared.createTransactionsService(),
+        bankAccountsService: BankAccountsService = ServiceFactory.shared.createBankAccountsService(),
+        direction: Direction,
+        state: ViewState<TransactionsOutput> = .idle
+    ) {
+        self.transactionsService = transactionsService
+        self.bankAccountsService = bankAccountsService
+        self.direction = direction
+        self.state = state
+    }
+    
+    // MARK: - TransactionsViewModel Methods
+    func loadTransactions(
+        from startDate: Date,
+        to endDate: Date
+    ) async {
+        state = .loading
+        
+        do {
+            let account = try await fetchCurrentAccount()
+            
+            let output = try await fetchTransactions(
+                accountId: account.id,
+                from: startDate,
+                to: endDate, 
+                direction: direction
+            )
+            state = .success(output)
+        } catch {
+            state = .error(error.localizedDescription)
+        }
+    }
+    
+    func presentTransactionHistory() {
+        isHistoryPresented = true
+    }
+    
+    func presentAddTransaction() {
+        isAddTransactionPresented = true
+    }
+}
