@@ -27,8 +27,9 @@ final class TransactionsServiceImp: TransactionsService {
     private let categoriesStorage: CategoriesStorage
     private let bankAccountsStorage: BankAccountsStorage
     private let backupStorage: BackupStorage
-    private let syncStatusManager: SyncStatusManager
     private let serviceCoordinator: ServiceCoordinator?
+    private let decoder = JSONDecoder()
+    private let encoder = JSONEncoder()
     
     // MARK: - Init
     init(
@@ -38,7 +39,6 @@ final class TransactionsServiceImp: TransactionsService {
         categoriesStorage: CategoriesStorage,
         bankAccountsStorage: BankAccountsStorage,
         backupStorage: BackupStorage,
-        syncStatusManager: SyncStatusManager = SyncStatusManager.shared,
         serviceCoordinator: ServiceCoordinator? = nil
     ) {
         self.networkAwareService = networkAwareService
@@ -47,7 +47,6 @@ final class TransactionsServiceImp: TransactionsService {
         self.categoriesStorage = categoriesStorage
         self.bankAccountsStorage = bankAccountsStorage
         self.backupStorage = backupStorage
-        self.syncStatusManager = syncStatusManager
         self.serviceCoordinator = serviceCoordinator
     }
     
@@ -56,10 +55,7 @@ final class TransactionsServiceImp: TransactionsService {
         from startDate: Date,
         to endDate: Date
     ) async throws -> [Transaction] {
-        _ = await syncAllBackupOperations()
-        
-        let backupOperations = await backupStorage.backupOperations
-        syncStatusManager.updateUnsyncedCount(backupOperations.count)
+        await syncBackupOperations()
         
         return try await networkAwareService.executeWithFallback(
             networkOperation: {
@@ -71,6 +67,13 @@ final class TransactionsServiceImp: TransactionsService {
                 
                 await saveTransactionsToStorage(serverTransactions)
                 
+                for transaction in serverTransactions {
+                    await backupStorage.removeBackupOperations(
+                        entityId: transaction.id,
+                        entityType: .transaction
+                    )
+                }
+                
                 return serverTransactions.sorted { $0.transactionDate > $1.transactionDate }
             },
             fallbackOperation: {
@@ -79,22 +82,11 @@ final class TransactionsServiceImp: TransactionsService {
                     from: startDate,
                     to: endDate
                 )
+                let backupOps = await backupStorage
+                    .backupOperations
+                    .filter { $0.entityType == .transaction }
                 
-                let unsyncedTransactions = await self.getUnsyncedTransactionsFromBackup(
-                    accountId: accountId,
-                    from: startDate,
-                    to: endDate
-                )
-                
-                var allTransactions = localTransactions
-                
-                for unsyncedTransaction in unsyncedTransactions {
-                    if !allTransactions.contains(where: { $0.id == unsyncedTransaction.id }) {
-                        allTransactions.append(unsyncedTransaction)
-                    }
-                }
-                
-                return allTransactions.sorted { $0.transactionDate > $1.transactionDate }
+                return merge(local: localTransactions)
             }
         )
     }
@@ -110,7 +102,10 @@ final class TransactionsServiceImp: TransactionsService {
                 )
                 
                 await storage.create(serverTransaction)
-                await serviceCoordinator?.transactionCreated(serverTransaction)
+                await backupStorage.removeBackupOperations(
+                    entityId: serverTransaction.id,
+                    entityType: .transaction
+                )
                 
                 return serverTransaction
             },
@@ -128,12 +123,13 @@ final class TransactionsServiceImp: TransactionsService {
                 await storage.create(localTransaction)
                 
                 let transactionData = localTransaction.toTransactionRequest()
+                let payload = try? encoder.encode(transactionData)
                 let backupOperation = BackupOperation(
-                    entityId: localId,
+                    entityId: localTransaction.id,
                     entityType: .transaction,
                     operationType: .create,
-                    transactionData: transactionData,
-                    accountData: nil
+                    payload: payload,
+                    timestamp: Date()
                 )
                 
                 await backupStorage.addBackupOperation(backupOperation)
@@ -155,25 +151,35 @@ final class TransactionsServiceImp: TransactionsService {
                 
                 await storage.update(serverTransaction)
                 await backupStorage.removeBackupOperations(
-                    entityId: transaction.id,
+                    entityId: serverTransaction.id,
                     entityType: .transaction
                 )
                 
                 return serverTransaction
             },
             fallbackOperation: {
+                let oldTransaction = (await storage.transactions)
+                    .first(where: { $0.id == transaction.id })
                 await storage.update(transaction)
                 
                 let transactionData = transaction.toTransactionRequest()
+                let payload = try? encoder.encode(transactionData)
                 let backupOperation = BackupOperation(
                     entityId: transaction.id,
                     entityType: .transaction,
                     operationType: .update,
-                    transactionData: transactionData,
-                    accountData: nil
+                    payload: payload,
+                    timestamp: Date()
                 )
                 
                 await backupStorage.addBackupOperation(backupOperation)
+                
+                if let old = oldTransaction {
+                    await serviceCoordinator?.transactionUpdated(
+                        old: old,
+                        new: transaction
+                    )
+                }
                 
                 return transaction
             }
@@ -187,8 +193,6 @@ final class TransactionsServiceImp: TransactionsService {
             throw NetworkError.notFound
         }
         
-        let accountId = transaction.account.id
-        
         return try await networkAwareService.executeWithFallback(
             networkOperation: {
                 try await deleteFromServer(transactionId)
@@ -197,27 +201,22 @@ final class TransactionsServiceImp: TransactionsService {
                     entityId: transactionId,
                     entityType: .transaction
                 )
-                await serviceCoordinator?.transactionDeleted(
-                    transactionId: transactionId,
-                    accountId: accountId
-                )
             },
             fallbackOperation: {
                 await storage.delete(id: transactionId)
                 
+                let transactionData = transaction.toTransactionRequest()
+                let payload = try? encoder.encode(transactionData)
                 let backupOperation = BackupOperation(
-                    entityId: transactionId,
+                    entityId: transaction.id,
                     entityType: .transaction,
                     operationType: .delete,
-                    transactionData: nil,
-                    accountData: nil
+                    payload: payload,
+                    timestamp: Date()
                 )
                 
                 await backupStorage.addBackupOperation(backupOperation)
-                await serviceCoordinator?.transactionDeleted(
-                    transactionId: transactionId,
-                    accountId: accountId
-                )
+                await serviceCoordinator?.transactionDeleted(transaction)
             }
         )
     }
@@ -236,175 +235,6 @@ private extension TransactionsServiceImp {
         } while existingIds.contains(newId)
         
         return newId
-    }
-    
-    func syncAllBackupOperations() async -> [String] {
-        let backupOperations = await backupStorage.backupOperations
-        
-        guard !backupOperations.isEmpty else { return [] }
-        
-        syncStatusManager.updateStatus(.syncing)
-        syncStatusManager.updateProgress(SyncProgress(
-            totalOperations: backupOperations.count,
-            completedOperations: 0,
-            currentOperation: "Подготовка синхронизации..."
-        ))
-        
-        var syncedOperationIds: [String] = []
-        
-        for (index, operation) in backupOperations.enumerated() {
-            syncStatusManager.updateProgress(SyncProgress(
-                totalOperations: backupOperations.count,
-                completedOperations: index,
-                currentOperation: "Синхронизация операции \(operation.entityId)..."
-            ))
-            
-            do {
-                switch operation.operationType {
-                case .create:
-                    if let transactionData = operation.transactionData {
-                        let serverTransactionId = try await postTransactionRequest(transactionData)
-                        
-                        await replaceLocalTransaction(
-                            localId: operation.entityId,
-                            serverId: serverTransactionId,
-                            transactionData: transactionData
-                        )
-                        syncedOperationIds.append(operation.id)
-                    }
-                    
-                case .update:
-                    if let transactionData = operation.transactionData, operation.entityId > 0 {
-                        let serverTransaction = try await updateTransactionRequest(transactionId: operation.entityId, body: transactionData)
-                        await storage.update(serverTransaction)
-                        syncedOperationIds.append(operation.id)
-                    }
-                case .delete:
-                    if operation.entityId > 0 {
-                        try await deleteFromServer(operation.entityId)
-                        await storage.delete(id: operation.entityId)
-                        syncedOperationIds.append(operation.id)
-                    }
-                }
-                
-            } catch {
-                if let networkError = error as? NetworkError {
-                    switch networkError {
-                    case .conflict:
-                        let conflictInfo = ConflictInfo(
-                            entityId: operation.entityId,
-                            entityType: operation.entityType.rawValue,
-                            localVersion: "local",
-                            serverVersion: "server",
-                            message: "Конфликт при синхронизации \(operation.entityType.rawValue) \(operation.entityId)"
-                        )
-                        syncStatusManager.updateStatus(.conflict(conflictInfo))
-                        print("[TransactionsServiceImp] Conflict detected during sync: \(conflictInfo)")
-                        return syncedOperationIds
-                    default:
-                        break
-                    }
-                }
-            }
-        }
-        
-        syncStatusManager.updateProgress(SyncProgress(
-            totalOperations: backupOperations.count,
-            completedOperations: backupOperations.count,
-            currentOperation: "Синхронизация завершена"
-        ))
-        
-        for operationId in syncedOperationIds {
-            await backupStorage.removeBackupOperation(id: operationId)
-        }
-        
-        let remainingOperations = await backupStorage.backupOperations
-        syncStatusManager.updateUnsyncedCount(remainingOperations.count)
-        
-        if remainingOperations.isEmpty {
-            syncStatusManager.updateStatus(.completed)
-        } else {
-            syncStatusManager.updateStatus(
-                .failed(
-                    ErrorEquatable(SyncError.unsyncedOperations(remainingOperations.count))
-                )
-            )
-        }
-        
-        return syncedOperationIds
-    }
-    
-    func replaceLocalTransaction(
-        localId: Int,
-        serverId: Int,
-        transactionData: TransactionRequestBody
-    ) async {
-        await storage.delete(id: localId)
-        
-        let serverTransaction = await createTransactionFromRequest(transactionData, serverId: serverId)
-        await storage.create(serverTransaction)
-    }
-    
-    func createTransactionFromRequest(_ body: TransactionRequestBody, serverId: Int) async -> Transaction {
-        let transactionDate = ISO8601DateFormatter().date(from: body.transactionDate) ?? Date()
-        
-        let account = await bankAccountsStorage.getCurrentAccount()
-        let category = await categoriesStorage.get(id: body.categoryId)
-        
-        let finalAccount = account ?? BankAccount(
-            id: body.accountId,
-            name: "Account \(body.accountId)",
-            balance: 0,
-            currency: "RUB"
-        )
-        
-        let finalCategory = category ?? Category(
-            id: body.categoryId,
-            name: "Category \(body.categoryId)",
-            emoji: "💰",
-            isIncome: .outcome
-        )
-        
-        let transaction = Transaction(
-            id: serverId,
-            account: finalAccount,
-            category: finalCategory,
-            amount: Decimal(string: body.amount) ?? 0,
-            transactionDate: transactionDate,
-            comment: body.comment
-        )
-        
-        return transaction
-    }
-    
-    func getUnsyncedTransactionsFromBackup(
-        accountId: Int,
-        from startDate: Date,
-        to endDate: Date
-    ) async -> [Transaction] {
-        let backupOperations = await backupStorage.backupOperations
-        var unsyncedTransactions: [Transaction] = []
-        
-        for operation in backupOperations {
-            guard operation.entityType == .transaction,
-                  operation.operationType == .create,
-                  let transactionData = operation.transactionData else {
-                continue
-            }
-            
-            if transactionData.accountId == accountId {
-                let transactionDate = ISO8601DateFormatter().date(from: transactionData.transactionDate) ?? Date()
-                
-                if transactionDate >= startDate && transactionDate <= endDate {
-                    let localTransactions = await storage.transactions
-                    if let localTransaction = localTransactions.first(where: { $0.id == operation.entityId }) {
-                        unsyncedTransactions.append(localTransaction)
-                    }
-                }
-            }
-        }
-        
-        return unsyncedTransactions
     }
     
     func fetchFromServer(
@@ -471,6 +301,39 @@ private extension TransactionsServiceImp {
                 await storage.create(transaction)
             }
         }
+        
+        let allTransactions = await storage.transactions
+        let temporaryTransactions = allTransactions.filter { $0.id < 0 }
+        
+        for transaction in temporaryTransactions {
+            
+            if transactions.contains(where: {
+                $0.account.id == transaction.account.id &&
+                $0.amount == transaction.amount &&
+                $0.transactionDate == transaction.transactionDate &&
+                $0.category.id == transaction.category.id
+            }) {
+                await storage.delete(id: transaction.id)
+            }
+        }
+        
+        var unique = [String: Transaction]()
+        for transaction in await storage.transactions {
+            let key = "\(transaction.account.id)-\(transaction.amount)-\(transaction.transactionDate.timeIntervalSince1970)-\(transaction.category.id)"
+            
+            if let existing = unique[key] {
+                
+                if transaction.id < existing.id {
+                    await storage.delete(id: existing.id)
+                    unique[key] = transaction
+                } else {
+                    await storage.delete(id: transaction.id)
+                }
+                
+            } else {
+                unique[key] = transaction
+            }
+        }
     }
     
     func getTransactionsFromLocalStorage(
@@ -487,6 +350,85 @@ private extension TransactionsServiceImp {
         }
         
         return filtered
+    }
+    
+    func createTransactionFromRequest(_ body: TransactionRequestBody, serverId: Int) async -> Transaction {
+        let transactionDate = ISO8601DateFormatter().date(from: body.transactionDate) ?? Date()
+        
+        let account = await bankAccountsStorage.getCurrentAccount()
+        let category = await categoriesStorage.get(id: body.categoryId)
+        
+        let finalAccount = account ?? BankAccount(
+            id: body.accountId,
+            name: "Account \(body.accountId)",
+            balance: 0,
+            currency: "RUB"
+        )
+        
+        let finalCategory = category ?? Category(
+            id: body.categoryId,
+            name: "Category \(body.categoryId)",
+            emoji: "💰",
+            isIncome: .outcome
+        )
+        
+        let transaction = Transaction(
+            id: serverId,
+            account: finalAccount,
+            category: finalCategory,
+            amount: Decimal(string: body.amount) ?? 0,
+            transactionDate: transactionDate,
+            comment: body.comment
+        )
+        
+        return transaction
+    }
+    
+    func syncBackupOperations() async {
+        let backupOperations = await backupStorage.backupOperations
+        
+        for operation in backupOperations where operation.entityType == .transaction {
+            
+            do {
+                if let data = operation.payload {
+                    let body = try decoder.decode(TransactionRequestBody.self, from: data)
+                    switch operation.operationType {
+                    case .create:
+                        let request = CreateTransactionRequest(body: body)
+                        _ = try await networkClient.execute(
+                            request,
+                            responseType: TransactionCreateResponse.self
+                        )
+                    case .update:
+                        let request = UpdateTransactionRequest(
+                            transactionId: operation.entityId,
+                            body: body
+                        )
+                        _ = try await networkClient.execute(
+                            request,
+                            responseType: TransactionResponse.self
+                        )
+                    case .delete:
+                        let request = DeleteTransactionRequest(transactionId: operation.entityId)
+                        _ = try await networkClient.execute(
+                            request,
+                            responseType: EmptyResponse.self
+                        )
+                    }
+                }
+                print("[Sync] [SUCCESS] Synced and removed backup operation: \(operation.id) for transactionId: \(operation.entityId)")
+                
+                await backupStorage.removeBackupOperation(id: operation.id)
+            } catch {
+                print("[Sync] [FAIL] Failed to sync backup operation: \(operation.id), transactionId: \(operation.entityId), error: \(error)")
+                
+                continue
+            }
+        }
+    }
+
+    func merge(local: [Transaction]) -> [Transaction] {
+        local.sorted { $0.transactionDate > $1.transactionDate }
     }
 }
 
