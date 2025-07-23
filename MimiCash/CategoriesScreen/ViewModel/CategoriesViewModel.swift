@@ -33,7 +33,7 @@ final class CategoriesViewModelImp: CategoriesViewModel, CategoriesProvider {
     
     // MARK: - Init
     init(
-        categoriesService: CategoriesService = ServiceFactory.shared.createCategoriesService(),
+        categoriesService: CategoriesService,
         searchEngine: SearchEngine = FuzzySearchEngine(),
         viewState: ViewState<[SearchResult<Category>]> = .idle
     ) {

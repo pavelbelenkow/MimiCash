@@ -21,7 +21,7 @@ final class CategoriesServiceImp: CategoriesService {
     init(
         networkAwareService: NetworkAwareService = NetworkAwareServiceImpl(),
         networkClient: NetworkClient = NetworkClientImpl(),
-        storage: CategoriesStorage = AppModelContainer.shared.categoriesStorage()
+        storage: CategoriesStorage
     ) {
         self.networkAwareService = networkAwareService
         self.networkClient = networkClient

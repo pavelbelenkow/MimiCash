@@ -4,6 +4,7 @@ struct TransactionRowView: View {
     let transaction: Transaction
     let isHistoryView: Bool
     let onTransactionChanged: (() -> Void)?
+    @Environment(\.diContainer) private var diContainer
     @State private var isEditPresented = false
     
     init(transaction: Transaction, isHistoryView: Bool, onTransactionChanged: (() -> Void)? = nil) {
@@ -59,7 +60,12 @@ struct TransactionRowView: View {
         }
         .fullScreenCover(isPresented: $isEditPresented) {
             TransactionFormView(
-                viewModel: TransactionFormViewModelImp(mode: .edit(transaction: transaction)),
+                viewModel: TransactionFormViewModelImp(
+                    mode: .edit(transaction: transaction),
+                    transactionsService: diContainer.transactionsService,
+                    categoriesService: diContainer.categoriesService,
+                    bankAccountsService: diContainer.bankAccountsService
+                ),
                 onDismiss: {
                     isEditPresented = false
                 },

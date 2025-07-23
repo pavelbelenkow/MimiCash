@@ -90,7 +90,10 @@ private enum Spec {
 }
 
 #Preview {
+    @Previewable @Environment(\.diContainer) var diContainer
     BankAccountView(
-        viewModel: BankAccountViewModelImp()
+        viewModel: BankAccountViewModelImp(
+            bankAccountsService: diContainer.bankAccountsService
+        )
     )
 }

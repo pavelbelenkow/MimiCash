@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TransactionsHistoryView: View {
+    @Environment(\.diContainer) private var diContainer
     @State private var viewModel: TransactionsHistoryViewModel
     
     init(viewModel: TransactionsHistoryViewModel) {
@@ -34,6 +35,8 @@ struct TransactionsHistoryView: View {
         .navigationDestination(isPresented: $viewModel.isAnalysisPresented) {
             AnalysisView(
                 viewModel: AnalysisViewModelImp(
+                    transactionsService: diContainer.transactionsService,
+                    bankAccountsService: diContainer.bankAccountsService,
                     direction: viewModel.direction
                 )
             )
@@ -70,8 +73,13 @@ private extension TransactionsHistoryView {
 }
 
 #Preview {
+    @Previewable @Environment(\.diContainer) var diContainer
     TransactionsHistoryView(
-        viewModel: TransactionsHistoryViewModelImp(direction: .outcome)
+        viewModel: TransactionsHistoryViewModelImp(
+            transactionsService: diContainer.transactionsService,
+            bankAccountsService: diContainer.bankAccountsService,
+            direction: .outcome
+        )
     )
 }
 

@@ -1,7 +1,8 @@
 import Foundation
 import SwiftData
 
-actor SwiftDataBackupStorage: BackupStorage {
+@MainActor
+final class SwiftDataBackupStorage: BackupStorage {
     
     // MARK: - Private Properties
     private let modelContext: ModelContext

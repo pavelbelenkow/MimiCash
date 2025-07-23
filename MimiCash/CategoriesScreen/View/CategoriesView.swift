@@ -32,7 +32,10 @@ private enum Spec {
 // MARK: - Preview
 
 #Preview {
+    @Previewable @Environment(\.diContainer) var diContainer
     CategoriesView(
-        viewModel: CategoriesViewModelImp()
+        viewModel: CategoriesViewModelImp(
+            categoriesService: diContainer.categoriesService
+        )
     )
 }

@@ -1,7 +1,8 @@
 import Foundation
 import SwiftData
 
-actor SwiftDataTransactionsStorage: TransactionsStorage {
+@MainActor
+final class SwiftDataTransactionsStorage: TransactionsStorage {
     
     // MARK: - Private Properties
     private let modelContext: ModelContext

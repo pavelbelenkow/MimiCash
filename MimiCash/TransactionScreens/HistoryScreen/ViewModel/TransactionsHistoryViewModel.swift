@@ -34,8 +34,8 @@ final class TransactionsHistoryViewModelImp: TransactionsHistoryViewModel, Trans
     
     // MARK: - Init
     init(
-        transactionsService: TransactionsService = ServiceFactory.shared.createTransactionsService(),
-        bankAccountsService: BankAccountsService = ServiceFactory.shared.createBankAccountsService(),
+        transactionsService: TransactionsService,
+        bankAccountsService: BankAccountsService,
         direction: Direction,
         state: ViewState<TransactionsOutput> = .idle
     ) {

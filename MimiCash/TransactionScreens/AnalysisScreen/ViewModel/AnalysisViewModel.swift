@@ -48,8 +48,8 @@ final class AnalysisViewModelImp: ObservableObject, AnalysisViewModel, Transacti
     
     // MARK: - Init
     init(
-        transactionsService: TransactionsService = ServiceFactory.shared.createTransactionsService(),
-        bankAccountsService: BankAccountsService = ServiceFactory.shared.createBankAccountsService(),
+        transactionsService: TransactionsService,
+        bankAccountsService: BankAccountsService,
         direction: Direction,
         state: ViewState<TransactionsOutput> = .idle
     ) {

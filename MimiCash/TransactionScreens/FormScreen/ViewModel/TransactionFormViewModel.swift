@@ -60,9 +60,9 @@ final class TransactionFormViewModelImp: TransactionFormViewModel, TransactionFo
     // MARK: - Init
     init(
         mode: TransactionFormMode,
-        transactionsService: TransactionsService = ServiceFactory.shared.createTransactionsService(),
-        categoriesService: CategoriesService = ServiceFactory.shared.createCategoriesService(),
-        bankAccountsService: BankAccountsService = ServiceFactory.shared.createBankAccountsService()
+        transactionsService: TransactionsService,
+        categoriesService: CategoriesService,
+        bankAccountsService: BankAccountsService
     ) {
         self.mode = mode
         self.transactionsService = transactionsService

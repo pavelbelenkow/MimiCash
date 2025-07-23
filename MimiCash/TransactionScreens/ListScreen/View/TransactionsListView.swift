@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct TransactionsListView: View {
+    @Environment(\.diContainer) private var diContainer
     @State private var viewModel: TransactionsListViewModel
     
     init(viewModel: TransactionsListViewModel) {
@@ -39,6 +40,8 @@ struct TransactionsListView: View {
             .navigationDestination(isPresented: $viewModel.isHistoryPresented) {
                 TransactionsHistoryView(
                     viewModel: TransactionsHistoryViewModelImp(
+                        transactionsService: diContainer.transactionsService,
+                        bankAccountsService: diContainer.bankAccountsService,
                         direction: viewModel.direction
                     )
                 )
@@ -46,7 +49,10 @@ struct TransactionsListView: View {
             .fullScreenCover(isPresented: $viewModel.isAddTransactionPresented) {
                 TransactionFormView(
                     viewModel: TransactionFormViewModelImp(
-                        mode: .create(direction: viewModel.direction)
+                        mode: .create(direction: viewModel.direction),
+                        transactionsService: diContainer.transactionsService,
+                        categoriesService: diContainer.categoriesService,
+                        bankAccountsService: diContainer.bankAccountsService
                     ),
                     onDismiss: {
                         viewModel.isAddTransactionPresented = false
@@ -89,8 +95,13 @@ private extension TransactionsListView {
 }
 
 #Preview {
+    @Previewable @Environment(\.diContainer) var diContainer
     TransactionsListView(
-        viewModel: TransactionsListViewModelImp(direction: .outcome)
+        viewModel: TransactionsListViewModelImp(
+            transactionsService: diContainer.transactionsService,
+            bankAccountsService: diContainer.bankAccountsService,
+            direction: .outcome
+        )
     )
 }
 

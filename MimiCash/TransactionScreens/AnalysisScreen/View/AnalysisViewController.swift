@@ -27,10 +27,12 @@ final class AnalysisViewController: UIViewController {
     }()
     
     private let viewModel: AnalysisViewModel
+    private let diContainer: AppDIContainer
     
     // MARK: - Init
-    init(viewModel: AnalysisViewModel) {
+    init(viewModel: AnalysisViewModel, diContainer: AppDIContainer) {
         self.viewModel = viewModel
+        self.diContainer = diContainer
         super.init(nibName: nil, bundle: nil)
     }
     
@@ -187,6 +189,7 @@ extension AnalysisViewController: AnalysisTableViewDelegate {
     func handleTransactionTap(_ transaction: Transaction) {
         let transactionFormViewController = TransactionFormModalView.createHostingController(
             transaction: transaction,
+            diContainer: diContainer,
             onDismiss: { [weak self] in
                 DispatchQueue.main.async { [weak self] in
                     self?.dismiss(animated: true)

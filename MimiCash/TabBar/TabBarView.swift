@@ -2,12 +2,13 @@ import SwiftUI
 
 struct TabBarView: View {
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.diContainer) private var diContainer
     @Binding var selectedTab: Tab
     
     var body: some View {
         TabView(selection: $selectedTab) {
             ForEach(Tab.allCases, id: \.self) { tab in
-                tab.makeView()
+                makeView(for: tab)
                     .tabItem {
                         VStack {
                             Image(tab.icon)
@@ -21,30 +22,39 @@ struct TabBarView: View {
             .toolbarBackground(.visible, for: .tabBar)
         }
     }
-}
-
-// MARK: - Subviews
-
-private extension Tab {
+    
+    // MARK: - Subviews
     
     @ViewBuilder
-    func makeView() -> some View {
-        switch self {
+    func makeView(for tab: Tab) -> some View {
+        switch tab {
         case .outcomes:
             TransactionsListView(
-                viewModel: TransactionsListViewModelImp(direction: .outcome)
+                viewModel: TransactionsListViewModelImp(
+                    transactionsService: diContainer.transactionsService,
+                    bankAccountsService: diContainer.bankAccountsService,
+                    direction: .outcome
+                )
             )
         case .incomes:
             TransactionsListView(
-                viewModel: TransactionsListViewModelImp(direction: .income)
+                viewModel: TransactionsListViewModelImp(
+                    transactionsService: diContainer.transactionsService,
+                    bankAccountsService: diContainer.bankAccountsService,
+                    direction: .income
+                )
             )
         case .account:
             BankAccountView(
-                viewModel: BankAccountViewModelImp()
+                viewModel: BankAccountViewModelImp(
+                    bankAccountsService: diContainer.bankAccountsService
+                )
             )
         case .categories:
             CategoriesView(
-                viewModel: CategoriesViewModelImp()
+                viewModel: CategoriesViewModelImp(
+                    categoriesService: diContainer.categoriesService
+                )
             )
         case .settings:
             Text(Tab.settings.label)

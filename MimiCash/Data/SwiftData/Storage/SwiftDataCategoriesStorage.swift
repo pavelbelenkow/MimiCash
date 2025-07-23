@@ -1,7 +1,8 @@
 import Foundation
 import SwiftData
 
-actor SwiftDataCategoriesStorage: CategoriesStorage {
+@MainActor
+final class SwiftDataCategoriesStorage: CategoriesStorage {
     
     // MARK: - Private Properties
     private let modelContext: ModelContext

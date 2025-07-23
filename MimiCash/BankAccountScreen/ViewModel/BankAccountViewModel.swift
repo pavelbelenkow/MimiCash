@@ -26,7 +26,7 @@ final class BankAccountViewModelImp: BankAccountViewModel, BankAccountsProvider 
     
     // MARK: - Init
     init(
-        bankAccountsService: BankAccountsService = ServiceFactory.shared.createBankAccountsService(),
+        bankAccountsService: BankAccountsService,
         viewState: ViewState<BankAccount> = .idle,
         state: BankAccountState = BankAccountState()
     ) {
