@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5932DF2D2E346C6E004CF721 /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 5932DF2C2E346C6E004CF721 /* Lottie */; };
 		5939EBE42E2D271100D333E9 /* PieChart in Frameworks */ = {isa = PBXBuildFile; productRef = 5939EBE32E2D271100D333E9 /* PieChart */; };
 /* End PBXBuildFile section */
 
@@ -44,6 +45,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				5939EBE42E2D271100D333E9 /* PieChart in Frameworks */,
+				5932DF2D2E346C6E004CF721 /* Lottie in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -96,6 +98,7 @@
 			name = MimiCash;
 			packageProductDependencies = (
 				5939EBE32E2D271100D333E9 /* PieChart */,
+				5932DF2C2E346C6E004CF721 /* Lottie */,
 			);
 			productName = MimiCash;
 			productReference = 59195EEF2DF49AFC00104727 /* MimiCash.app */;
@@ -154,6 +157,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				5939EBE22E2D271100D333E9 /* XCLocalSwiftPackageReference "Utilities" */,
+				5932DF2B2E346C6E004CF721 /* XCRemoteSwiftPackageReference "lottie-spm" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 59195EF02DF49AFC00104727 /* Products */;
@@ -461,7 +465,23 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		5932DF2B2E346C6E004CF721 /* XCRemoteSwiftPackageReference "lottie-spm" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/airbnb/lottie-spm.git";
+			requirement = {
+				kind = exactVersion;
+				version = 4.5.2;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+		5932DF2C2E346C6E004CF721 /* Lottie */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 5932DF2B2E346C6E004CF721 /* XCRemoteSwiftPackageReference "lottie-spm" */;
+			productName = Lottie;
+		};
 		5939EBE32E2D271100D333E9 /* PieChart */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = PieChart;
