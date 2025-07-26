@@ -29,8 +29,11 @@ struct BankAccountView: View {
                         )
                         
                         CurrencySection(viewModel: $viewModel)
+                            .listSectionSpacing(Spec.Spacing.sectionSpacing)
+                        
+                        BalanceChartSection(viewModel: $viewModel)
+                            .listSectionSpacing(Spec.Spacing.sectionSpacing * 3)
                     }
-                    .listSectionSpacing(Spec.Spacing.sectionSpacing)
                     .safeAreaPadding(.top)
                     .refreshable {
                         Task {
@@ -93,7 +96,8 @@ private enum Spec {
     @Previewable @Environment(\.diContainer) var diContainer
     BankAccountView(
         viewModel: BankAccountViewModelImp(
-            bankAccountsService: diContainer.bankAccountsService
+            bankAccountsService: diContainer.bankAccountsService,
+            balanceChartService: diContainer.balanceChartService
         )
     )
 }
