@@ -5,6 +5,7 @@ struct BankAccountState {
     var isEditing: Bool
     var isSpoilerOn: Bool
     var isPresentedDialog: Bool
+    var chartState: BalanceChartState
     
     init(
         balanceInput: String = "",
@@ -12,7 +13,8 @@ struct BankAccountState {
         selectedCurrency: String = "",
         isEditing: Bool = false,
         isSpoilerOn: Bool = false,
-        isPresentedDialog: Bool = false
+        isPresentedDialog: Bool = false,
+        chartState: BalanceChartState = BalanceChartState()
     ) {
         self.balanceInput = balanceInput
         self.lastValidBalanceInput = lastValidBalanceInput
@@ -20,5 +22,6 @@ struct BankAccountState {
         self.isEditing = isEditing
         self.isSpoilerOn = isSpoilerOn
         self.isPresentedDialog = isPresentedDialog
+        self.chartState = chartState
     }
 }

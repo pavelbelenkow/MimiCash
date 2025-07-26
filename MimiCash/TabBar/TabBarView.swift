@@ -47,7 +47,8 @@ struct TabBarView: View {
         case .account:
             BankAccountView(
                 viewModel: BankAccountViewModelImp(
-                    bankAccountsService: diContainer.bankAccountsService
+                    bankAccountsService: diContainer.bankAccountsService,
+                    balanceChartService: diContainer.balanceChartService
                 )
             )
         case .categories:

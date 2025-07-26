@@ -13,6 +13,7 @@ final class AppDIContainer: ObservableObject {
     let transactionsService: TransactionsService
     let bankAccountsService: BankAccountsService
     let categoriesService: CategoriesService
+    let balanceChartService: BalanceChartService
 
     init() {
         let schema = Schema([
@@ -42,6 +43,10 @@ final class AppDIContainer: ObservableObject {
             bankAccountsStorage: bankAccountsStorage,
             backupStorage: backupStorage,
             serviceCoordinator: ServiceCoordinatorImp(bankAccountsService: bankAccountsService)
+        )
+        
+        self.balanceChartService = BalanceChartServiceImpl(
+            transactionsService: transactionsService
         )
     }
 }
