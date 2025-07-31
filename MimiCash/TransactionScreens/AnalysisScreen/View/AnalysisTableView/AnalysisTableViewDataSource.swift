@@ -1,4 +1,5 @@
 import Foundation
+import PieChart
 
 // MARK: - AnalysisTableViewDataSource Protocol
 
@@ -10,4 +11,5 @@ protocol AnalysisTableViewDataSource: AnyObject {
     func endDate() -> Date
     func currentSort() -> TransactionsSort
     func sortedOutput() -> TransactionsOutput?
+    func pieChartEntities() -> [PieChartEntity]
 }

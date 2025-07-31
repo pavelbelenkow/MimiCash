@@ -25,6 +25,7 @@ final class AnalysisTableView: UITableView {
         register(DatePickerCell.self, forCellReuseIdentifier: DatePickerCell.identifier)
         register(SortPickerCell.self, forCellReuseIdentifier: SortPickerCell.identifier)
         register(TotalAmountCell.self, forCellReuseIdentifier: TotalAmountCell.identifier)
+        register(PieChartCell.self, forCellReuseIdentifier: PieChartCell.identifier)
         register(TransactionAnalysisCell.self, forCellReuseIdentifier: TransactionAnalysisCell.identifier)
         register(EmptyStateCell.self, forCellReuseIdentifier: EmptyStateCell.identifier)
         register(SectionHeaderView.self, forHeaderFooterViewReuseIdentifier: SectionHeaderView.identifier)
@@ -71,6 +72,11 @@ extension AnalysisTableView: UITableViewDataSource {
                 at: indexPath,
                 with: dataSource
             )
+        case .pieChart:
+            return configurePieChartCell(
+                at: indexPath,
+                with: dataSource
+            )
         case let .transaction(transaction):
             return configureTransactionCell(
                 at: indexPath,
@@ -88,17 +94,24 @@ extension AnalysisTableView: UITableViewDataSource {
 extension AnalysisTableView: UITableViewDelegate {
     
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-        indexPath.section == .zero ? Spec.RowHeight.regular : Spec.RowHeight.large
+        switch indexPath.section {
+        case 0:
+            return Spec.RowHeight.regular
+        case 1:
+            return Spec.RowHeight.chart
+        default:
+            return Spec.RowHeight.large
+        }
     }
     
     func tableView(_ tableView: UITableView, shouldHighlightRowAt indexPath: IndexPath) -> Bool {
-        indexPath.section == 1
+        indexPath.section == 2
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         
-        if indexPath.section == 1 {
+        if indexPath.section == 2 {
             let cellType = analysisDataSource?.cellType(for: indexPath)
             if case let .transaction(transaction) = cellType {
                 analysisDelegate?.handleTransactionTap(transaction)
@@ -111,7 +124,7 @@ extension AnalysisTableView: UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
-        guard section == 1 else { return nil }
+        guard section == 2 else { return nil }
         
         guard let header = tableView.dequeueReusableHeaderFooterView(
             withIdentifier: SectionHeaderView.identifier
@@ -205,6 +218,21 @@ private extension AnalysisTableView {
         return cell
     }
     
+    func configurePieChartCell(
+        at indexPath: IndexPath,
+        with dataSource: AnalysisTableViewDataSource
+    ) -> UITableViewCell {
+        guard let cell = dequeueReusableCell(
+            withIdentifier: PieChartCell.identifier,
+            for: indexPath
+        ) as? PieChartCell else { return UITableViewCell() }
+        
+        let entities = dataSource.pieChartEntities()
+        cell.configure(with: entities)
+        
+        return cell
+    }
+    
     func configureTransactionCell(
         at indexPath: IndexPath,
         with dataSource: AnalysisTableViewDataSource,
@@ -245,6 +273,7 @@ private enum Spec {
     enum RowHeight {
         static let regular: CGFloat = 44
         static let large: CGFloat = 60
+        static let chart: CGFloat = 150
     }
     
     enum HeaderHeight {

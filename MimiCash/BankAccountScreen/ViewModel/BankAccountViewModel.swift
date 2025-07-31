@@ -12,6 +12,8 @@ protocol BankAccountViewModel {
     func handleEditToggle()
     func handleCurrencyTap()
     func handleBalanceInput(_ value: String)
+    func loadBalanceChartData() async
+    func handleChartPeriodChange(_ period: BalanceChartPeriod) async
 }
 
 @Observable
@@ -19,18 +21,25 @@ final class BankAccountViewModelImp: BankAccountViewModel, BankAccountsProvider 
     
     // MARK: - BankAccountsProvider Properties
     let bankAccountsService: BankAccountsService
+    let balanceChartService: BalanceChartService
     
     // MARK: - Properties
     var viewState: ViewState<BankAccount>
     var state: BankAccountState
     
+    // MARK: - Cache
+    private var chartDataCache: [BalanceChartPeriod: [BalanceDataPoint]] = [:]
+    private var isLoadingChartData = false
+    
     // MARK: - Init
     init(
         bankAccountsService: BankAccountsService,
+        balanceChartService: BalanceChartService,
         viewState: ViewState<BankAccount> = .idle,
         state: BankAccountState = BankAccountState()
     ) {
         self.bankAccountsService = bankAccountsService
+        self.balanceChartService = balanceChartService
         self.viewState = viewState
         self.state = state
     }
@@ -109,6 +118,48 @@ final class BankAccountViewModelImp: BankAccountViewModel, BankAccountsProvider 
         } else {
             state.balanceInput = state.lastValidBalanceInput
         }
+    }
+    
+    func loadBalanceChartData() async {
+        guard case let .success(account) = viewState else { return }
+        
+        if let cachedData = chartDataCache[state.chartState.selectedPeriod] {
+            state.chartState.dataPoints = cachedData
+            return
+        }
+        
+        guard !isLoadingChartData else { return }
+        isLoadingChartData = true
+        state.chartState.isLoading = true
+        
+        let dataPoints = await Task.detached(priority: .userInitiated) {
+            await self.balanceChartService.calculateBalanceData(
+                for: self.state.chartState.selectedPeriod,
+                accountId: account.id,
+                currentBalance: account.balance
+            )
+        }.value
+        
+        chartDataCache[state.chartState.selectedPeriod] = dataPoints
+        state.chartState.dataPoints = dataPoints
+        state.chartState.isLoading = false
+        isLoadingChartData = false
+    }
+    
+    func handleChartPeriodChange(_ period: BalanceChartPeriod) async {
+        state.chartState.selectedPeriod = period
+        
+        if let cachedData = chartDataCache[period] {
+            state.chartState.dataPoints = cachedData
+            return
+        }
+        
+        await loadBalanceChartData()
+    }
+    
+    // MARK: - Cache Management
+    func clearChartCache() {
+        chartDataCache.removeAll()
     }
 }
 
