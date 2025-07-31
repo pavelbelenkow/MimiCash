@@ -103,6 +103,20 @@ struct BarChart: View {
                 }
             }
         }
+        .chartOverlay { proxy in
+            if
+                let selectedDataPoint = chartState.selectedDataPoint,
+                let xPosition = proxy.position(forX: selectedDataPoint.date)
+            {
+                LollypopView(
+                    dataPoint: selectedDataPoint,
+                    currency: currency,
+                    period: chartState.selectedPeriod
+                )
+                .position(x: xPosition, y: -30)
+                .transition(.scale.combined(with: .opacity))
+            }
+        }
         .onChange(of: chartState.rawSelectedDate) { _, newValue in
             if let date = newValue {
                 chartState.selectedDataPoint = BalanceChartConfiguration.findDataPoint(
@@ -132,15 +146,6 @@ struct BarChart: View {
             .foregroundStyle(selectedDataPoint.isPositive ? Color.accent : .red)
             .offset(yStart: -10)
             .zIndex(-1)
-            .annotation(
-                position: .top,
-                overflowResolution: .init(
-                    x: .fit(to: .chart),
-                    y: .fit
-                )) {
-                    LollypopView(dataPoint: selectedDataPoint, currency: currency, period: chartState.selectedPeriod)
-                        .transition(.scale.combined(with: .opacity))
-                }
         }
     }
     
